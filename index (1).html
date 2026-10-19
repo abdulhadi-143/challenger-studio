@@ -1,0 +1,4323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CHALLENGER STUDIO — Teleprompter &amp; Content Command Center</title>
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --card: #161619;
+      --card-elevated: #1d1d22;
+      --border: #2a2a2e;
+      --gold: #e8b33c;
+      --gold-dim: rgba(232, 179, 60, 0.14);
+      --gold-border: rgba(232, 179, 60, 0.45);
+      --text: #f5f1e6;
+      --muted: #8a8578;
+      --danger: #e05252;
+      --danger-dim: rgba(224, 82, 82, 0.14);
+      --success: #45b36b;
+      --success-dim: rgba(69, 179, 107, 0.14);
+      --radius: 12px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      background-color: var(--bg);
+      background-image: radial-gradient(ellipse 85% 42% at 50% -12%, rgba(232, 179, 60, 0.085), transparent 70%);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Storage warning banner */
+    .storage-warning {
+      display: none;
+      background: var(--danger-dim);
+      border-bottom: 1px solid var(--danger);
+      color: var(--text);
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+    .storage-warning.visible {
+      display: block;
+    }
+
+    /* Layout Container */
+    .app-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 16px 64px;
+    }
+
+    /* Header */
+    .app-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .brand-title .gold {
+      color: var(--gold);
+      text-shadow: 0 0 22px rgba(232, 179, 60, 0.28);
+    }
+
+    .brand-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    /* Navigation Tabs */
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      background: var(--card);
+      padding: 5px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      min-height: 44px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                  color 0.2s ease,
+                  transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.24s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-btn.active {
+      background: var(--gold);
+      color: #0d0d0f;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(232, 179, 60, 0.32);
+    }
+
+    /* Tab Panels & Staggered Card Animations */
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: panelReveal 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .tab-panel.active .card,
+    .tab-panel.active .stat-card {
+      animation: cardRiseIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .tab-panel.active .stats-grid .stat-card:nth-child(1) { animation-delay: 0.02s; }
+    .tab-panel.active .stats-grid .stat-card:nth-child(2) { animation-delay: 0.06s; }
+    .tab-panel.active .stats-grid .stat-card:nth-child(3) { animation-delay: 0.10s; }
+    .tab-panel.active .stats-grid .stat-card:nth-child(4) { animation-delay: 0.14s; }
+    .tab-panel.active > .card:nth-of-type(1) { animation-delay: 0.08s; }
+    .tab-panel.active > .card:nth-of-type(2) { animation-delay: 0.13s; }
+    .tab-panel.active > .card:nth-of-type(3) { animation-delay: 0.18s; }
+
+    @keyframes panelReveal {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes cardRiseIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.992); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes statBump {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.08); filter: brightness(1.25); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    .stat-bump {
+      animation: statBump 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes rowSlideHighlight {
+      0% { background-color: rgba(232, 179, 60, 0.22); transform: translateX(-4px); }
+      100% { background-color: transparent; transform: translateX(0); }
+    }
+
+    .row-flash {
+      animation: rowSlideHighlight 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .card:hover {
+      border-color: #35353b;
+      box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    /* Buttons & Inputs */
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card-elevated);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 10px 16px;
+      min-height: 44px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+                  background-color 0.18s ease,
+                  border-color 0.18s ease,
+                  box-shadow 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--muted);
+      background: #25252c;
+      transform: translateY(-1px);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px) scale(0.985);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-gold {
+      background: linear-gradient(180deg, #f2c14e 0%, #e8b33c 100%);
+      border-color: var(--gold);
+      color: #0d0d0f;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(232, 179, 60, 0.22);
+    }
+
+    .btn-gold:hover:not(:disabled) {
+      background: linear-gradient(180deg, #f7ca5e 0%, #eeb940 100%);
+      border-color: #f5c653;
+      color: #0d0d0f;
+      box-shadow: 0 6px 20px rgba(232, 179, 60, 0.36);
+    }
+
+    .btn-active-toggle {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+      color: var(--gold);
+      box-shadow: 0 0 14px rgba(232, 179, 60, 0.15);
+    }
+
+    .btn-danger-outline {
+      color: var(--danger);
+      border-color: rgba(224, 82, 82, 0.35);
+      background: transparent;
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background: var(--danger-dim);
+      border-color: var(--danger);
+    }
+
+    .btn-sm {
+      padding: 8px 14px;
+      min-height: 44px;
+      font-size: 0.84rem;
+    }
+
+    label.field-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 13px;
+      min-height: 44px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input[type="date"] {
+      color-scheme: dark;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(232, 179, 60, 0.15);
+    }
+
+    /* ==========================================
+       MODULE 1: TELEPROMPTER (PRO EYE-LINE ENGINE)
+       ========================================== */
+    .tp-card.cinema-mode {
+      position: fixed;
+      inset: 12px;
+      z-index: 999;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      background: rgba(13, 13, 15, 0.98);
+      border-color: rgba(232, 179, 60, 0.45);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(232, 179, 60, 0.2);
+      overflow-y: auto;
+    }
+
+    .tp-top-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .tp-top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tp-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-height: 44px;
+      font-size: 0.84rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .tp-meta-pill strong {
+      color: var(--gold);
+      font-family: var(--font-mono);
+    }
+
+    /* Studio HUD Bar above stage */
+    .tp-hud-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 14px;
+      background: linear-gradient(180deg, rgba(16, 16, 20, 0.95) 0%, rgba(10, 10, 13, 0.95) 100%);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--radius) var(--radius) 0 0;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .tp-hud-left,
+    .tp-hud-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tp-live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .tp-live-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .tp-live-pill.is-live {
+      color: var(--gold);
+      border-color: rgba(232, 179, 60, 0.45);
+      background: rgba(232, 179, 60, 0.12);
+    }
+
+    .tp-live-pill.is-live .dot {
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      animation: liveDotPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes liveDotPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.8); }
+    }
+
+    .tp-hud-stat {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .tp-hud-stat strong {
+      color: var(--gold);
+    }
+
+    .tp-stage-wrapper {
+      position: relative;
+      background: radial-gradient(circle at 50% 36%, #0c0c11 0%, #050507 75%);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      overflow: hidden;
+      margin-bottom: 18px;
+      box-shadow: inset 0 0 55px rgba(0, 0, 0, 0.9);
+      flex: 1 1 auto;
+    }
+
+    /* Top laser progress bar on stage */
+    .tp-stage-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .tp-stage-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #b88418, var(--gold), #ffe08a);
+      box-shadow: 0 0 12px rgba(232, 179, 60, 0.65);
+      transition: width 0.08s linear;
+    }
+
+    .tp-stage-wrapper::before,
+    .tp-stage-wrapper::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 68px;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .tp-stage-wrapper::before {
+      top: 0;
+      background: linear-gradient(180deg, #050507 0%, rgba(5, 5, 7, 0) 100%);
+    }
+
+    .tp-stage-wrapper::after {
+      bottom: 0;
+      background: linear-gradient(0deg, #050507 0%, rgba(5, 5, 7, 0) 100%);
+    }
+
+    /* Pro Eye-Line Camera Viewer Zone */
+    .tp-reading-guide {
+      position: absolute;
+      top: 36%;
+      left: 0;
+      right: 0;
+      height: 92px;
+      transform: translateY(-50%);
+      border-top: 1px solid rgba(232, 179, 60, 0.32);
+      border-bottom: 1px solid rgba(232, 179, 60, 0.32);
+      background: linear-gradient(90deg, rgba(232, 179, 60, 0.09) 0%, rgba(232, 179, 60, 0.03) 50%, rgba(232, 179, 60, 0.09) 100%);
+      box-shadow: 0 0 36px rgba(232, 179, 60, 0.07), inset 0 0 24px rgba(232, 179, 60, 0.04);
+      pointer-events: none;
+      z-index: 2;
+      transition: opacity 0.25s ease;
+    }
+
+    .tp-reading-guide::before {
+      content: "▸ EYE-LINE VIEWER ZONE (LOOK HERE)";
+      position: absolute;
+      left: 14px;
+      top: -20px;
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-shadow: 0 0 10px rgba(232, 179, 60, 0.4);
+    }
+
+    .tp-reading-guide::after {
+      content: "◀";
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      color: rgba(232, 179, 60, 0.65);
+    }
+
+    .tp-viewport {
+      position: relative;
+      height: 54vh;
+      min-height: 320px;
+      max-height: 680px;
+      overflow-y: auto;
+      padding: 150px 38px 260px;
+      color: var(--text);
+      font-size: 34px;
+      line-height: 1.52;
+      font-weight: 600;
+      word-break: break-word;
+      scroll-behavior: auto;
+      transition: transform 0.2s ease;
+      z-index: 3;
+    }
+
+    .tp-card.cinema-mode .tp-viewport {
+      height: 68vh;
+      max-height: none;
+    }
+
+    .tp-viewport.mirrored {
+      transform: scaleX(-1);
+    }
+
+    /* Centered reading track so eyes stay locked near lens */
+    .tp-lines-track {
+      margin: 0 auto;
+      max-width: 100%;
+      transition: max-width 0.25s ease;
+    }
+
+    .tp-viewport.narrow-column .tp-lines-track {
+      max-width: 650px;
+    }
+
+    /* Individual Teleprompter Sentence / Breath Line */
+    .tp-line {
+      position: relative;
+      padding: 10px 18px 10px 20px;
+      margin: 6px 0;
+      border-left: 4px solid transparent;
+      border-radius: 0 12px 12px 0;
+      cursor: pointer;
+      transform-origin: left center;
+      transition:
+        transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.22s ease,
+        color 0.2s ease,
+        background-color 0.22s ease,
+        border-color 0.22s ease,
+        text-shadow 0.22s ease,
+        font-weight 0.15s ease;
+      will-change: transform, opacity;
+    }
+
+    .tp-line.tp-para-gap {
+      margin-top: 24px;
+    }
+
+    .tp-line:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* When Eye-Line Focus Engine is active */
+    .tp-viewport.eye-focus-enabled .tp-line.is-past {
+      opacity: 0.23;
+      transform: scale(0.94);
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .tp-viewport.eye-focus-enabled .tp-line.is-upcoming {
+      opacity: 0.44;
+      transform: scale(0.96);
+      font-weight: 500;
+      color: #c5bfb2;
+    }
+
+    .tp-viewport.eye-focus-enabled .tp-line.is-near-focus {
+      opacity: 0.74;
+      transform: scale(1.015);
+      font-weight: 650;
+      color: var(--text);
+      border-left-color: rgba(232, 179, 60, 0.28);
+    }
+
+    /* ACTIVE EYE-VIEWER LINE: Bigger, Bolder, Illuminated */
+    .tp-viewport.eye-focus-enabled .tp-line.is-eye-focus {
+      opacity: 1;
+      transform: scale(1.12);
+      font-weight: 800;
+      color: #ffffff;
+      border-left-color: var(--gold);
+      background: linear-gradient(90deg, rgba(232, 179, 60, 0.16) 0%, rgba(232, 179, 60, 0.04) 70%, rgba(232, 179, 60, 0) 100%);
+      text-shadow: 0 2px 22px rgba(232, 179, 60, 0.38);
+      box-shadow: -4px 0 18px rgba(232, 179, 60, 0.22);
+    }
+
+    /* In Narrow Column mode, scale from center so text stays balanced */
+    .tp-viewport.narrow-column .tp-line {
+      transform-origin: left center;
+    }
+
+    /* Inline Vocal / Delivery Cue Pill (e.g. [PAUSE], [EMPHASIS]) */
+    .tp-cue-badge {
+      display: inline-block;
+      vertical-align: middle;
+      padding: 2px 9px;
+      margin: 0 4px;
+      font-size: 0.52em;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0d0d0f;
+      background: var(--gold);
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(232, 179, 60, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .tp-viewport::-webkit-scrollbar {
+      width: 8px;
+    }
+    .tp-viewport::-webkit-scrollbar-track {
+      background: #08080a;
+    }
+    .tp-viewport::-webkit-scrollbar-thumb {
+      background: #2a2a2e;
+      border-radius: 4px;
+    }
+
+    .tp-empty-msg {
+      color: var(--muted);
+      font-size: 1.15rem;
+      font-weight: 500;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    /* Countdown Overlay */
+    .tp-countdown-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 8, 10, 0.86);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 10;
+      user-select: none;
+    }
+
+    .tp-countdown-overlay.active {
+      display: flex;
+    }
+
+    .tp-countdown-num {
+      font-size: 6.5rem;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1;
+      text-shadow: 0 0 36px rgba(232, 179, 60, 0.45);
+      animation: pulseCount 0.65s ease-out infinite;
+    }
+
+    .tp-countdown-label {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    @keyframes pulseCount {
+      0% { transform: scale(1.18); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.78; }
+    }
+
+    /* Teleprompter Controls */
+    .tp-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      align-items: center;
+    }
+
+    .tp-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tp-btn-group .btn {
+      flex: 1 1 auto;
+    }
+
+    .tp-pro-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.07);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tp-pro-toggles-left,
+    .tp-pro-toggles-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tp-hint-note {
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .slider-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+    }
+
+    .slider-title {
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .slider-val {
+      color: var(--gold);
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--gold);
+      cursor: pointer;
+      height: 24px;
+    }
+
+    .tp-shortcuts-bar {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      margin: 0 2px;
+    }
+
+    /* Script Manager Vocal Cue & Hook Quick-Insert Bar */
+    .sm-quick-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      background: rgba(13, 13, 15, 0.75);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .sm-quick-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+
+    .cue-chip-btn {
+      padding: 4px 9px;
+      min-height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .cue-chip-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-dim);
+      transform: translateY(-1px);
+    }
+
+    .cue-chip-btn.is-cue {
+      font-family: var(--font-mono);
+      color: var(--gold);
+      border-color: rgba(232, 179, 60, 0.3);
+    }
+
+    /* ==========================================
+       MODULE 2: CONTENT COMMAND CENTER
+       ========================================== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.24s ease,
+                  box-shadow 0.24s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(232, 179, 60, 0.42);
+      box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.72), 0 0 18px rgba(232, 179, 60, 0.08);
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--text);
+      font-family: var(--font-mono);
+      line-height: 1.15;
+    }
+
+    .stat-value .gold {
+      color: var(--gold);
+    }
+
+    .stat-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* 100-Post Goal Progress Bar */
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .goal-stats {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .goal-pct {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    .goal-remaining {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #b88318 0%, #e8b33c 45%, #fce192 50%, #e8b33c 55%, #f7d479 100%);
+      background-size: 200% 100%;
+      animation: barShimmer 3.2s linear infinite;
+      border-radius: 999px;
+      transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 0 16px rgba(232, 179, 60, 0.35);
+    }
+
+    @keyframes barShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ==========================================
+       ALL-ROUND PERFORMANCE & GITHUB HEATMAP
+       ========================================== */
+    .perf-banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+
+    .perf-banner-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1 1 260px;
+    }
+
+    .perf-tier-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .perf-tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+    }
+
+    .perf-today-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+    }
+
+    .perf-today-pill.committed {
+      background: var(--success-dim);
+      border-color: var(--success);
+      color: #a9f0c2;
+    }
+
+    .perf-diagnostic {
+      font-size: 0.88rem;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .perf-score-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+    }
+
+    .perf-score-num {
+      font-family: var(--font-mono);
+      font-size: 1.75rem;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .perf-score-meta {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    /* Range switcher for heatmap */
+    .heatmap-range-group {
+      display: inline-flex;
+      gap: 4px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .range-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 6px 10px;
+      min-height: 36px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .range-btn:hover {
+      color: var(--text);
+    }
+
+    .range-btn.active {
+      background: var(--gold);
+      color: #0d0d0f;
+    }
+
+    /* Heatmap Scroll Container */
+    .heatmap-outer {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .heatmap-scroll {
+      overflow-x: auto;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .heatmap-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .heatmap-scroll::-webkit-scrollbar-track {
+      background: #101014;
+      border-radius: 3px;
+    }
+    .heatmap-scroll::-webkit-scrollbar-thumb {
+      background: #2a2a2e;
+      border-radius: 3px;
+    }
+
+    .heatmap-board {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: max-content;
+    }
+
+    .heatmap-months-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 14px;
+      gap: 4px;
+      padding-left: 34px;
+      height: 16px;
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      user-select: none;
+    }
+
+    .heatmap-month-label {
+      white-space: nowrap;
+      overflow: visible;
+    }
+
+    .heatmap-body-row {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    .heatmap-days-col {
+      display: grid;
+      grid-template-rows: repeat(7, 14px);
+      gap: 4px;
+      width: 28px;
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      line-height: 14px;
+      user-select: none;
+    }
+
+    .heatmap-weeks-grid {
+      display: flex;
+      gap: 4px;
+    }
+
+    .heatmap-week-col {
+      display: grid;
+      grid-template-rows: repeat(7, 14px);
+      gap: 4px;
+    }
+
+    .heatmap-cell {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      background: #1b1b21;
+      border: 1px solid #26262e;
+      cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  border-color 0.15s ease,
+                  background-color 0.25s ease,
+                  box-shadow 0.2s ease;
+      padding: 0;
+      appearance: none;
+    }
+
+    .heatmap-cell:hover,
+    .heatmap-cell:focus-visible {
+      transform: scale(1.34);
+      border-color: var(--text);
+      z-index: 2;
+      outline: none;
+    }
+
+    .heatmap-cell.selected {
+      outline: 2px solid var(--text);
+      outline-offset: 1px;
+    }
+
+    .heatmap-cell.is-today {
+      box-shadow: 0 0 0 1.5px var(--gold);
+    }
+
+    .heatmap-cell.is-future {
+      opacity: 0.22;
+      pointer-events: none;
+    }
+
+    .heatmap-cell[data-level="1"] {
+      background: rgba(232, 179, 60, 0.30);
+      border-color: rgba(232, 179, 60, 0.48);
+    }
+
+    .heatmap-cell[data-level="2"] {
+      background: rgba(232, 179, 60, 0.56);
+      border-color: rgba(232, 179, 60, 0.74);
+    }
+
+    .heatmap-cell[data-level="3"] {
+      background: rgba(232, 179, 60, 0.82);
+      border-color: #e8b33c;
+    }
+
+    .heatmap-cell[data-level="4"] {
+      background: #f5c449;
+      border-color: #fff2c6;
+      box-shadow: 0 0 8px rgba(245, 196, 73, 0.45);
+    }
+
+    .heatmap-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+
+    .heatmap-inspector {
+      color: var(--text);
+      font-size: 0.84rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .heatmap-inspector .muted {
+      color: var(--muted);
+    }
+
+    .heatmap-legend {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .heatmap-legend .heatmap-cell {
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* All-Round Performance 4-Widget Grid */
+    .perf-breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .perf-mini-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .perf-mini-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .perf-mini-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    .perf-mini-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .perf-mini-val .gold {
+      color: var(--gold);
+    }
+
+    .perf-mini-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .perf-mini-bar-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    .perf-mini-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    /* Platform stacked bar segments */
+    .seg-instagram { background: #e1306c; height: 100%; }
+    .seg-linkedin  { background: #3894f0; height: 100%; }
+    .seg-youtube   { background: #ff4646; height: 100%; }
+    .seg-tiktok    { background: #2de2e6; height: 100%; }
+
+    .platform-mix-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .mix-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    /* Forms */
+    .log-post-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .inline-msg {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+
+    .inline-msg.error {
+      display: block;
+      background: var(--danger-dim);
+      border: 1px solid var(--danger);
+      color: #ffb8b8;
+    }
+
+    .inline-msg.success {
+      display: block;
+      background: var(--success-dim);
+      border: 1px solid var(--success);
+      color: #a9f0c2;
+    }
+
+    /* Tables */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table.studio-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    table.studio-table th {
+      padding: 11px 12px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    table.studio-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(42, 42, 46, 0.65);
+      vertical-align: middle;
+    }
+
+    table.studio-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.studio-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .platform-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .platform-pill[data-platform="Instagram"] {
+      border-color: rgba(225, 48, 108, 0.45);
+      color: #ff85ae;
+      background: rgba(225, 48, 108, 0.1);
+    }
+
+    .platform-pill[data-platform="LinkedIn"] {
+      border-color: rgba(56, 148, 240, 0.45);
+      color: #82bfff;
+      background: rgba(56, 148, 240, 0.1);
+    }
+
+    .platform-pill[data-platform="YouTube"] {
+      border-color: rgba(255, 70, 70, 0.45);
+      color: #ff8a8a;
+      background: rgba(255, 70, 70, 0.1);
+    }
+
+    .platform-pill[data-platform="TikTok"] {
+      border-color: rgba(45, 226, 230, 0.45);
+      color: #7ef4f7;
+      background: rgba(45, 226, 230, 0.1);
+    }
+
+    /* Accessible Touch-Friendly Checkboxes */
+    .check-cell-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 4px 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-cell-label input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    .delete-icon-btn {
+      appearance: none;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .delete-icon-btn:hover {
+      color: var(--danger);
+      background: var(--danger-dim);
+      border-color: rgba(224, 82, 82, 0.35);
+    }
+
+    .empty-state-box {
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      background: rgba(13, 13, 15, 0.45);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+
+    /* Script Manager Form & List */
+    .sm-form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 22px;
+      padding-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sm-helper-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .sm-word-readout {
+      font-family: var(--font-mono);
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .sm-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .priority-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 44px;
+      padding: 8px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      user-select: none;
+    }
+
+    .priority-toggle input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+
+    .sm-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sm-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.15s ease;
+    }
+
+    .sm-row.editing {
+      border-color: var(--gold);
+      background: var(--gold-dim);
+    }
+
+    .sm-row-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 180px;
+      flex: 1 1 220px;
+    }
+
+    .sm-row-title {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.96rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      word-break: break-word;
+    }
+
+    .sm-row-meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .sm-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Settings Card */
+    .settings-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* Responsive Breakpoints (down to 360px mobile) */
+    @media (max-width: 820px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .perf-breakdown-grid {
+        grid-template-columns: 1fr;
+      }
+      .log-post-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .log-post-grid .field-title {
+        grid-column: 1 / -1;
+      }
+      .log-post-grid .field-submit {
+        grid-column: 1 / -1;
+      }
+      .log-post-grid .field-submit .btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app-shell {
+        padding: 0 12px 48px;
+      }
+      .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px 0;
+      }
+      .tab-nav {
+        width: 100%;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 10px 8px;
+        font-size: 0.86rem;
+      }
+      .card {
+        padding: 16px;
+      }
+      .tp-top-bar {
+        grid-template-columns: 1fr;
+      }
+      .tp-viewport {
+        padding: 72px 18px 180px;
+        height: 48vh;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .stat-card {
+        padding: 14px;
+      }
+      .stat-value {
+        font-size: 1.45rem;
+      }
+      .perf-score-box {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .log-post-grid {
+        grid-template-columns: 1fr;
+      }
+      .sm-row-actions {
+        width: 100%;
+      }
+      .sm-row-actions .btn {
+        flex: 1;
+        min-height: 44px;
+      }
+      .settings-actions .btn {
+        width: 100%;
+      }
+      table.studio-table th,
+      table.studio-table td {
+        padding: 8px 6px;
+        font-size: 0.84rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="storageWarning" class="storage-warning" role="alert">
+    Local storage is unavailable (private browsing or restricted file permissions). Changes will work for this session only — use Export Backup before closing.
+  </div>
+
+  <div class="app-shell">
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="brand">
+        <h1 class="brand-title">CHALLENGER <span class="gold">STUDIO</span></h1>
+        <span class="brand-sub">@challenger_1771 · Instagram · LinkedIn · YouTube</span>
+      </div>
+      <nav class="tab-nav" aria-label="Main Modules">
+        <button type="button" id="tabBtnTeleprompter" class="tab-btn active" data-tab="teleprompter">
+          Teleprompter
+        </button>
+        <button type="button" id="tabBtnCommand" class="tab-btn" data-tab="command">
+          Command Center
+        </button>
+        <!-- PHASE 2 TAB SLOT: Daily Life OS button can be mounted here -->
+      </nav>
+    </header>
+
+    <!-- ==========================================
+         MODULE 1: TELEPROMPTER (PRO EYE-LINE ENGINE)
+         ========================================== -->
+    <section id="panelTeleprompter" class="tab-panel active" aria-labelledby="tabBtnTeleprompter">
+      <div class="card tp-card" id="tpCardContainer">
+        <div class="tp-top-bar">
+          <div>
+            <label class="field-label" for="tpScriptSelect">Active Script</label>
+            <select id="tpScriptSelect" aria-label="Select script for teleprompter"></select>
+          </div>
+          <div class="tp-top-actions">
+            <div class="tp-meta-pill" id="tpScriptMeta">
+              <span>0 words · ~0 sec</span>
+            </div>
+            <button type="button" id="tpMarkRecordedBtn" class="btn btn-sm" title="Mark active script as Recorded in your pipeline">
+              ○ Mark Recorded
+            </button>
+            <button type="button" id="tpCinemaBtn" class="btn btn-sm" aria-pressed="false" title="Toggle distraction-free Studio Focus mode (Shortcut: F)">
+              ⛶ Studio Focus
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Broadcast HUD Bar -->
+        <div class="tp-hud-bar" id="tpHudBar">
+          <div class="tp-hud-left">
+            <span id="tpLiveBadge" class="tp-live-pill">
+              <span class="dot"></span>
+              <span id="tpLiveBadgeText">STANDBY</span>
+            </span>
+            <span class="tp-hud-stat" id="tpEyeLineCounter">
+              Line <strong>1</strong> / 1
+            </span>
+            <span class="tp-hud-stat" id="tpPaceReadout">
+              Pace: <strong>~150 WPM</strong>
+            </span>
+          </div>
+          <div class="tp-hud-right">
+            <span class="tp-hud-stat" id="tpTimeRemaining">
+              Remaining: <strong>~0:00</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Teleprompter Display Stage -->
+        <div class="tp-stage-wrapper">
+          <div class="tp-stage-progress" aria-hidden="true">
+            <div id="tpStageProgressFill" class="tp-stage-progress-fill"></div>
+          </div>
+          <div class="tp-reading-guide" id="tpReadingGuide" aria-hidden="true"></div>
+          <div id="tpCountdownOverlay" class="tp-countdown-overlay" aria-live="assertive">
+            <div id="tpCountdownNum" class="tp-countdown-num">3</div>
+            <div class="tp-countdown-label">Lock eyes on the zone · Rolling in…</div>
+          </div>
+          <div id="tpViewport" class="tp-viewport eye-focus-enabled narrow-column" tabindex="0" role="region" aria-label="Teleprompter script text"></div>
+        </div>
+
+        <!-- Teleprompter Primary Controls -->
+        <div class="tp-controls-grid">
+          <div class="tp-btn-group">
+            <button type="button" id="tpStartPauseBtn" class="btn btn-gold">
+              ▶ Start
+            </button>
+            <button type="button" id="tpResetBtn" class="btn">
+              ↺ Reset
+            </button>
+            <button type="button" id="tpMirrorBtn" class="btn" aria-pressed="false">
+              Mirror: OFF
+            </button>
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-header">
+              <span class="slider-title">Scroll Speed</span>
+              <span id="tpSpeedLabel" class="slider-val">60 px/sec</span>
+            </div>
+            <input type="range" id="tpSpeedSlider" min="15" max="220" step="1" value="60" aria-label="Scroll speed in pixels per second" />
+          </div>
+
+          <div class="slider-box">
+            <div class="slider-header">
+              <span class="slider-title">Text Size</span>
+              <span id="tpSizeLabel" class="slider-val">34 px</span>
+            </div>
+            <input type="range" id="tpSizeSlider" min="20" max="64" step="1" value="34" aria-label="Teleprompter text size in pixels" />
+          </div>
+        </div>
+
+        <!-- Pro Eye-Viewer & Camera Alignment Toggles -->
+        <div class="tp-pro-toggles">
+          <div class="tp-pro-toggles-left">
+            <button type="button" id="tpEyeFocusBtn" class="btn btn-sm btn-active-toggle" aria-pressed="true" title="Magnify &amp; bold the line inside the Eye-Line Viewer Zone">
+              👁 Eye-Line Magnification: ON
+            </button>
+            <button type="button" id="tpColumnWidthBtn" class="btn btn-sm btn-active-toggle" aria-pressed="true" title="Keep script in a narrow centered column so your eyes never scan left-to-right on camera">
+              📐 Center Lens Column: ON
+            </button>
+          </div>
+          <div class="tp-pro-toggles-right">
+            <span class="tp-hint-note">💡 Tip: Click any line on the stage to jump directly to it</span>
+          </div>
+        </div>
+
+        <div class="tp-shortcuts-bar">
+          <div>
+            Shortcuts:
+            <span class="kbd">Space</span> Play/Pause
+            <span class="kbd">↑</span>/<span class="kbd">↓</span> Speed
+            <span class="kbd">R</span> Reset
+            <span class="kbd">E</span> Eye-Focus
+            <span class="kbd">F</span> Studio Focus
+          </div>
+          <div id="tpScrollStatus">Ready at top</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         MODULE 2: CONTENT COMMAND CENTER
+         ========================================== -->
+    <section id="panelCommand" class="tab-panel" aria-labelledby="tabBtnCommand">
+      <!-- Stat Cards Row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Posts Published</span>
+          <div class="stat-value" id="statPostsPublished"><span class="gold">0</span>/100</div>
+          <span class="stat-sub" id="statPostsSub">100-post challenge</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Drafts Ready</span>
+          <div class="stat-value" id="statDraftsReady">0</div>
+          <span class="stat-sub" id="statDraftsSub">Unposted scripts in vault</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Day Streak</span>
+          <div class="stat-value" id="statDayStreak"><span class="gold">0</span>d</div>
+          <span class="stat-sub" id="statStreakSub">Log today to ignite</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Scripts Recorded</span>
+          <div class="stat-value" id="statScriptsRecorded">0/0</div>
+          <span class="stat-sub" id="statRecordedSub">Camera-ready progress</span>
+        </div>
+      </div>
+
+      <!-- 100-Post Goal Progress Card -->
+      <div class="card">
+        <div class="goal-header">
+          <div>
+            <h2 class="card-title">Road to 100 Posts</h2>
+            <p class="card-subtitle">Volume builds leverage. Ship daily, refine in public.</p>
+          </div>
+          <div class="goal-stats">
+            <span id="goalPercentText" class="goal-pct">0%</span>
+            <span id="goalRemainingText" class="goal-remaining">100 to go</span>
+          </div>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="goalProgressBarTrack">
+          <div id="goalProgressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- All-Round Performance & GitHub-Style Daily Commit Heatmap Card -->
+      <div class="card" id="performanceDashboardCard">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">All-Round Performance &amp; Daily Commit Grid</h2>
+            <p class="card-subtitle">Auto-detected shipping consistency, daily activity heatmap, and pipeline velocity.</p>
+          </div>
+          <div class="heatmap-range-group" role="group" aria-label="Heatmap time range">
+            <button type="button" class="range-btn" data-weeks="16">16W</button>
+            <button type="button" class="range-btn" data-weeks="26">26W</button>
+            <button type="button" class="range-btn active" data-weeks="52">52W</button>
+          </div>
+        </div>
+
+        <!-- Auto-Detected Performance Rating Banner -->
+        <div class="perf-banner">
+          <div class="perf-banner-left">
+            <div class="perf-tier-row">
+              <span id="perfTierBadge" class="perf-tier-badge">D-TIER · COLD START</span>
+              <span id="perfTodayCommitPill" class="perf-today-pill">Today: No commit yet</span>
+            </div>
+            <p id="perfDiagnosticText" class="perf-diagnostic">
+              Zero posts logged yet. Ship your first post today to light up the grid.
+            </p>
+          </div>
+          <div class="perf-score-box" title="Composite score from active streak, 7-day velocity, 30-day consistency, and script pipeline execution">
+            <div id="perfOverallScore" class="perf-score-num">0</div>
+            <div class="perf-score-meta">
+              <span>All-Round</span>
+              <span>Index / 100</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GitHub-Style Daily Commit Heatmap -->
+        <div class="heatmap-outer">
+          <div id="heatmapScrollWrapper" class="heatmap-scroll">
+            <div class="heatmap-board">
+              <div id="heatmapMonthsRow" class="heatmap-months-row"></div>
+              <div class="heatmap-body-row">
+                <div class="heatmap-days-col" aria-hidden="true">
+                  <span>Mon</span>
+                  <span></span>
+                  <span>Wed</span>
+                  <span></span>
+                  <span>Fri</span>
+                  <span></span>
+                  <span>Sun</span>
+                </div>
+                <div id="heatmapWeeksGrid" class="heatmap-weeks-grid" role="grid" aria-label="Daily post activity heatmap"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="heatmap-footer">
+            <div id="heatmapInspector" class="heatmap-inspector" aria-live="polite">
+              <span class="muted">Hover or tap any square to inspect daily output — or click a square to set the Log Post date.</span>
+            </div>
+            <div class="heatmap-legend" aria-label="Activity intensity legend">
+              <span>Less</span>
+              <span class="heatmap-cell" data-level="0" title="0 posts"></span>
+              <span class="heatmap-cell" data-level="1" title="1 post"></span>
+              <span class="heatmap-cell" data-level="2" title="2 posts"></span>
+              <span class="heatmap-cell" data-level="3" title="3 posts"></span>
+              <span class="heatmap-cell" data-level="4" title="4+ posts"></span>
+              <span>More</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-Card All-Round Breakdown Grid -->
+        <div class="perf-breakdown-grid">
+          <!-- 1. Weekly Velocity -->
+          <div class="perf-mini-card">
+            <div class="perf-mini-top">
+              <span class="perf-mini-title">7-Day Shipping Velocity</span>
+              <span id="perfWeeklyVal" class="perf-mini-val"><span class="gold">0</span> / 7 target</span>
+            </div>
+            <div class="perf-mini-bar">
+              <div id="perfWeeklyBar" class="perf-mini-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="perf-mini-sub">
+              <span id="perfWeeklyDelta">Last 7 days output</span>
+              <span id="perfActiveDaysYear">0 active days total</span>
+            </div>
+          </div>
+
+          <!-- 2. 30-Day Consistency & Best Streak -->
+          <div class="perf-mini-card">
+            <div class="perf-mini-top">
+              <span class="perf-mini-title">30-Day Consistency</span>
+              <span id="perfMonthlyVal" class="perf-mini-val"><span class="gold">0%</span> (0/30d)</span>
+            </div>
+            <div class="perf-mini-bar">
+              <div id="perfMonthlyBar" class="perf-mini-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="perf-mini-sub">
+              <span id="perfBestStreak">Best streak: 0 days</span>
+              <span id="perfAvgPerWeek">0.0 posts/wk avg (30d)</span>
+            </div>
+          </div>
+
+          <!-- 3. Platform Distribution Mix -->
+          <div class="perf-mini-card">
+            <div class="perf-mini-top">
+              <span class="perf-mini-title">Platform Output Mix</span>
+              <span id="perfTopPlatformVal" class="perf-mini-val">No posts yet</span>
+            </div>
+            <div id="perfPlatformStackedBar" class="perf-mini-bar">
+              <div class="perf-mini-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div id="perfPlatformLegend" class="platform-mix-legend">
+              <span><i class="mix-dot" style="background:#e1306c;"></i>IG: 0</span>
+              <span><i class="mix-dot" style="background:#3894f0;"></i>LI: 0</span>
+              <span><i class="mix-dot" style="background:#ff4646;"></i>YT: 0</span>
+              <span><i class="mix-dot" style="background:#2de2e6;"></i>TT: 0</span>
+            </div>
+          </div>
+
+          <!-- 4. Script Pipeline Execution -->
+          <div class="perf-mini-card">
+            <div class="perf-mini-top">
+              <span class="perf-mini-title">Vault-to-Published Conversion</span>
+              <span id="perfPipelineVal" class="perf-mini-val"><span class="gold">0%</span> posted</span>
+            </div>
+            <div class="perf-mini-bar">
+              <div id="perfPipelineBar" class="perf-mini-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="perf-mini-sub">
+              <span id="perfPipelineRecSub">Recorded: 0/5 (0%)</span>
+              <span id="perfPipelinePostSub">Posted: 0/5 (0%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log a Post Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Log a Published Post</h2>
+            <p class="card-subtitle">Every shipped piece counts toward your 100-post milestone and daily streak.</p>
+          </div>
+        </div>
+        <form id="logPostForm" novalidate>
+          <div class="log-post-grid">
+            <div class="field-title">
+              <label class="field-label" for="postTitleInput">Title / Topic</label>
+              <input type="text" id="postTitleInput" placeholder="e.g. Why cheap advice costs you decades" required />
+            </div>
+            <div>
+              <label class="field-label" for="postPlatformSelect">Platform</label>
+              <select id="postPlatformSelect">
+                <option value="Instagram">Instagram</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="YouTube">YouTube</option>
+                <option value="TikTok">TikTok</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="postDateInput">Date</label>
+              <input type="date" id="postDateInput" required />
+            </div>
+            <div class="field-submit">
+              <button type="submit" class="btn btn-gold">＋ Log Post</button>
+            </div>
+          </div>
+          <div id="logPostMsg" class="inline-msg" role="status"></div>
+        </form>
+      </div>
+
+      <!-- Recent Posts Table Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Recent Posts</h2>
+            <p class="card-subtitle" id="recentPostsSub">Newest first · Showing up to 30 entries</p>
+          </div>
+        </div>
+        <div id="recentPostsContainer"></div>
+      </div>
+
+      <!-- Script Library Checklist Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Script Production Pipeline</h2>
+            <p class="card-subtitle">Check off scripts as you record and publish them.</p>
+          </div>
+        </div>
+        <div id="scriptLibraryContainer"></div>
+      </div>
+
+      <!-- ==========================================
+           SCRIPT MANAGER CARD
+           ========================================== -->
+      <div class="card" id="scriptManagerCard">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title" id="smFormHeading">Script Manager — ＋ New Script</h2>
+            <p class="card-subtitle">Write hook-first scripts. Starred scripts jump to the top of your Teleprompter.</p>
+          </div>
+        </div>
+
+        <form id="scriptManagerForm" class="sm-form-stack" novalidate>
+          <div>
+            <label class="field-label" for="smTitleInput">Script Title</label>
+            <input type="text" id="smTitleInput" placeholder="e.g. Stop Protecting Pocket Change" required />
+          </div>
+
+          <div>
+            <label class="field-label" for="smBodyInput">Script Body (Spoken Words &amp; Camera Cues)</label>
+            <div class="sm-quick-bar" aria-label="Quick insert vocal cues and hook templates">
+              <span class="sm-quick-label">Vocal Cues:</span>
+              <button type="button" class="cue-chip-btn is-cue" data-insert-cue="[PAUSE]">[PAUSE]</button>
+              <button type="button" class="cue-chip-btn is-cue" data-insert-cue="[EMPHASIS]">[EMPHASIS]</button>
+              <button type="button" class="cue-chip-btn is-cue" data-insert-cue="[SLOW DOWN]">[SLOW DOWN]</button>
+              <button type="button" class="cue-chip-btn is-cue" data-insert-cue="[LEAN IN]">[LEAN IN]</button>
+              <span class="sm-quick-label" style="margin-left:6px;">Hook Starters:</span>
+              <button type="button" class="cue-chip-btn" data-insert-hook="contrarian">⚡ Contrarian Hook</button>
+              <button type="button" class="cue-chip-btn" data-insert-hook="mistake">🛑 Costly Mistake</button>
+              <button type="button" class="cue-chip-btn" data-insert-hook="framework">📐 3-Step Rule</button>
+            </div>
+            <textarea id="smBodyInput" placeholder="Write the exact words you will speak to camera... Use [PAUSE] or [EMPHASIS] for visual delivery cues on the prompter." required></textarea>
+            <div class="sm-helper-row">
+              <span>Target pace: 150 words/min (40–60 sec sweet spot) · Cues render as gold badges</span>
+              <span id="smWordHelper" class="sm-word-readout">0 words · ~0 sec</span>
+            </div>
+          </div>
+
+          <div class="sm-controls-row">
+            <label class="priority-toggle" for="smStarredInput">
+              <input type="checkbox" id="smStarredInput" />
+              <span>⭐ Priority (pin to top of Teleprompter)</span>
+            </label>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" id="smCancelEditBtn" class="btn" style="display:none;">
+                Cancel
+              </button>
+              <button type="submit" id="smSubmitBtn" class="btn btn-gold">
+                ＋ Add Script
+              </button>
+            </div>
+          </div>
+
+          <div id="smFeedbackMsg" class="inline-msg" role="status"></div>
+        </form>
+
+        <div id="smListContainer" class="sm-list"></div>
+      </div>
+
+      <!-- ==========================================
+           SETTINGS / BACKUP CARD
+           ========================================== -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Data &amp; Backup</h2>
+            <p class="card-subtitle">All data lives locally in your browser under key <code>challengerStudio</code>. Export JSON backups anytime.</p>
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button type="button" id="exportBackupBtn" class="btn">
+            ⬇ Export backup (JSON)
+          </button>
+          <button type="button" id="importBackupBtn" class="btn">
+            ⬆ Import backup
+          </button>
+          <input type="file" id="importBackupFileInput" accept=".json,application/json" style="display:none;" />
+        </div>
+        <div id="settingsFeedbackMsg" class="inline-msg" role="status"></div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PHASE 2 SCAFFOLD (DO NOT BUILD YET)
+         Future Section: #panelDailyLifeOS
+         (Gym log, study check-ins, 35,000 TRY savings tracker)
+         ========================================== -->
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ============================================================
+         1. CONSTANTS & SEED SCRIPTS
+         ============================================================ */
+      const STORAGE_KEY = "challengerStudio";
+      const GOAL_POSTS = 100;
+      const WPM_RATE = 150;
+      const VALID_PLATFORMS = ["Instagram", "LinkedIn", "YouTube", "TikTok"];
+
+      // 5 realistic hook-first scripts (40–60 sec each at 150 WPM)
+      const DEFAULT_SEED_SCRIPTS = [
+        {
+          id: "seed-money-mindset",
+          title: "Why Cheap Advice Costs You the Most",
+          starred: true,
+          body: "You do not have an income problem. You have a price-anchor problem.\n\nMost people spend four hours hunting for a ten-dollar discount code, then hesitate for six months to invest five hundred dollars in a skill that would double their hourly rate.\n\nWhy? Because you were trained to measure cost in dollars instead of decades.\n\nEvery time you refuse to pay for speed, you pay with your twenties and thirties. Rich builders buy back time. Broke builders try to DIY every single mistake from scratch.\n\nNext time you look at a book, a tool, or a mentor that solves a problem you have been stuck on for ninety days, ask one question: what is another three months of staying stuck costing me?\n\nStop protecting your pocket change at the expense of your future earning power."
+        },
+        {
+          id: "seed-morning-habits",
+          title: "Your Morning Routine Is a Procrastination Trap",
+          starred: true,
+          body: "If your morning routine has seven steps before you touch real work, it is not discipline. It is procrastination dressed up as self-improvement.\n\nJournaling for thirty minutes, sunlight walks, cold plunges, and matcha rituals feel productive because they give you a dopamine hit without the risk of failure. Nobody gets rejected during an ice bath.\n\nReal momentum comes from doing the hardest, highest-leverage task before your brain wakes up enough to negotiate with you.\n\nGive yourself one rule tomorrow: for the first sixty minutes after waking up, no phone, no inbox, no ritual Olympics. Open the blank page, write the script, make the offer, or ship the code.\n\nEarn your routine after you win the first hour."
+        },
+        {
+          id: "seed-focus-saying-no",
+          title: "Every 'Yes' Is a Silent 'No' to Your Main Goal",
+          starred: false,
+          body: "Opportunity does not kill focus. Mediocre opportunity does.\n\nNobody ruins their year by saying yes to something obviously stupid. You ruin your year by saying yes to seven things that look 'pretty good' on paper.\n\nEvery coffee chat with no agenda, every side project that strokes your ego, and every favor you accept out of guilt steals cognitive bandwidth from the one thing that actually moves the needle.\n\nHigh performers look ruthless from the outside, not because they hate people, but because they respect math. Twenty hours split across five goals produces zero breakthroughs. Twenty hours poured into one obsession compounds.\n\nIf an invitation is not an immediate, undeniable yes for your main goal this quarter, make it a clean, polite no."
+        },
+        {
+          id: "seed-selling-is-serving",
+          title: "If You Hate Selling, You Don't Believe in Your Work",
+          starred: false,
+          body: "Smart creators love building in private and freeze the second it is time to sell. You tell yourself you do not want to sound pushy.\n\nLet us be honest: that is not humility, that is fear of judgment.\n\nThink about it. If you built a product, a service, or a framework that genuinely saves someone fifty hours of pain, hiding it is not polite. Hiding it is selfish.\n\nMeanwhile, someone with half your skill and twice your audacity is taking your clients and giving them worse results.\n\nSelling is simply making a clear, honest promise to the exact person who already has the problem you solved. Stop apologizing for your price tag. State the problem, show the proof, and invite them to act."
+        },
+        {
+          id: "seed-cortes-ships-psychology",
+          title: "Why Cortés Burned the Ships — And Why You Won't",
+          starred: false,
+          body: "In fifteen-nineteen, Hernán Cortés landed on the coast of Veracruz with six hundred men and gave an order that sounded insane: sink our own fleet.\n\nWhy? Because human psychology has a fatal flaw called the Plan B tax.\n\nBehavioral studies show that merely thinking about a backup plan measurably reduces how hard you work on Plan A. As long as the boats are floating in the harbor, your brain treats discomfort as a signal to retreat instead of a problem to solve.\n\nWe do the exact same thing today. We half-launch a channel, half-build a business, and keep one foot on the dock so our ego stays safe if it fails.\n\nRemove the escape hatch. When retreat is off the table, resourcefulness takes over."
+        }
+      ];
+
+      /* ============================================================
+         2. APPLICATION STATE & STORAGE LAYER
+         ============================================================ */
+      let state = {
+        posts: [],
+        scripts: [],
+        checks: {}
+      };
+
+      // UI / Ephemeral state
+      let activeTab = "teleprompter";
+      let editingScriptId = null;
+
+      // Teleprompter runtime state
+      let tpSelectedScriptId = null;
+      let tpIsScrolling = false;
+      let tpIsCountingDown = false;
+      let tpCountdownTimerIds = [];
+      let tpRafId = null;
+      let tpLastFrameTime = null;
+      let tpScrollAccumulator = 0;
+      let tpSpeedPxPerSec = 60;
+      let tpTextSizePx = 34;
+      let tpMirrored = false;
+      let tpEyeFocusEnabled = true;
+      let tpNarrowColumn = true;
+      let tpCinemaMode = false;
+      let tpActiveLineIndex = 0;
+
+      function createFreshSeedState(seedScripts) {
+        const scriptsCopy = seedScripts.map(function (s) {
+          return {
+            id: String(s.id),
+            title: String(s.title),
+            body: String(s.body),
+            starred: Boolean(s.starred)
+          };
+        });
+        const checksMap = {};
+        scriptsCopy.forEach(function (s) {
+          checksMap[s.id] = { recorded: false, posted: false };
+        });
+        return {
+          posts: [],
+          scripts: scriptsCopy,
+          checks: checksMap
+        };
+      }
+
+      function validateAndNormalizeState(raw) {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+          return null;
+        }
+        if (!Array.isArray(raw.posts) || !Array.isArray(raw.scripts) || typeof raw.checks !== "object" || raw.checks === null || Array.isArray(raw.checks)) {
+          return null;
+        }
+
+        const cleanPosts = [];
+        for (let i = 0; i < raw.posts.length; i++) {
+          const p = raw.posts[i];
+          if (!p || typeof p !== "object") return null;
+          if (typeof p.title !== "string" || !p.title.trim()) return null;
+          if (typeof p.platform !== "string" || !p.platform.trim()) return null;
+          if (typeof p.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(p.date)) return null;
+          cleanPosts.push({
+            title: p.title.trim(),
+            platform: p.platform.trim(),
+            date: p.date
+          });
+        }
+
+        const cleanScripts = [];
+        for (let i = 0; i < raw.scripts.length; i++) {
+          const s = raw.scripts[i];
+          if (!s || typeof s !== "object") return null;
+          if (typeof s.id !== "string" && typeof s.id !== "number") return null;
+          if (typeof s.title !== "string" || !s.title.trim()) return null;
+          if (typeof s.body !== "string" || !s.body.trim()) return null;
+          cleanScripts.push({
+            id: String(s.id),
+            title: s.title.trim(),
+            body: s.body,
+            starred: Boolean(s.starred)
+          });
+        }
+
+        const cleanChecks = {};
+        cleanScripts.forEach(function (s) {
+          const existing = raw.checks[s.id];
+          cleanChecks[s.id] = {
+            recorded: Boolean(existing && existing.recorded),
+            posted: Boolean(existing && existing.posted)
+          };
+        });
+
+        // Preserve any extra valid keys in checks
+        Object.keys(raw.checks).forEach(function (k) {
+          if (!cleanChecks[k] && raw.checks[k] && typeof raw.checks[k] === "object") {
+            cleanChecks[k] = {
+              recorded: Boolean(raw.checks[k].recorded),
+              posted: Boolean(raw.checks[k].posted)
+            };
+          }
+        });
+
+        return {
+          posts: cleanPosts,
+          scripts: cleanScripts,
+          checks: cleanChecks
+        };
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          const banner = document.getElementById("storageWarning");
+          if (banner) banner.classList.add("visible");
+        }
+      }
+
+      function loadState() {
+        try {
+          const rawStr = localStorage.getItem(STORAGE_KEY);
+          if (rawStr) {
+            const parsed = JSON.parse(rawStr);
+            const validated = validateAndNormalizeState(parsed);
+            if (validated) {
+              state = validated;
+              return;
+            }
+          }
+        } catch (err) {
+          const banner = document.getElementById("storageWarning");
+          if (banner) banner.classList.add("visible");
+        }
+
+        state = createFreshSeedState(DEFAULT_SEED_SCRIPTS);
+        saveState();
+      }
+
+      /* ============================================================
+         3. UTILITY HELPERS (Dates, Word Count, Sorting)
+         ============================================================ */
+      function formatLocalDate(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const d = String(dateObj.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
+      }
+
+      function getTodayLocalStr() {
+        return formatLocalDate(new Date());
+      }
+
+      function countWordsAndSeconds(text) {
+        // Strip bracketed camera cues like [PAUSE] from spoken word count
+        const withoutCues = String(text || "").replace(/\[[A-Za-z0-9 _\-\/]+\]/g, " ");
+        const trimmed = withoutCues.trim();
+        if (!trimmed) {
+          return { words: 0, seconds: 0 };
+        }
+        const words = trimmed.split(/\s+/).length;
+        const seconds = Math.max(1, Math.round((words / WPM_RATE) * 60));
+        return { words: words, seconds: seconds };
+      }
+
+      function formatWordReadout(text) {
+        const stats = countWordsAndSeconds(text);
+        return stats.words + " " + (stats.words === 1 ? "word" : "words") + " · ~" + stats.seconds + " sec";
+      }
+
+      function formatClockMinSec(totalSeconds) {
+        const sec = Math.max(0, Math.round(Number(totalSeconds) || 0));
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return m + ":" + String(s).padStart(2, "0");
+      }
+
+      function getSortedScripts() {
+        // Starred scripts first, preserving relative order within groups
+        const starred = [];
+        const regular = [];
+        for (let i = 0; i < state.scripts.length; i++) {
+          if (state.scripts[i].starred) {
+            starred.push(state.scripts[i]);
+          } else {
+            regular.push(state.scripts[i]);
+          }
+        }
+        return starred.concat(regular);
+      }
+
+      function calculateDayStreak() {
+        if (!state.posts || state.posts.length === 0) return 0;
+
+        const dateSet = new Set();
+        for (let i = 0; i < state.posts.length; i++) {
+          if (state.posts[i] && state.posts[i].date) {
+            dateSet.add(state.posts[i].date);
+          }
+        }
+
+        const now = new Date();
+        const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayStr = formatLocalDate(cursor);
+
+        const yesterday = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() - 1);
+        const yesterdayStr = formatLocalDate(yesterday);
+
+        if (!dateSet.has(todayStr)) {
+          if (dateSet.has(yesterdayStr)) {
+            cursor.setDate(cursor.getDate() - 1);
+          } else {
+            return 0;
+          }
+        }
+
+        let streak = 0;
+        while (dateSet.has(formatLocalDate(cursor))) {
+          streak += 1;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
+      }
+
+      function showInlineMessage(elementId, text, type) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = text;
+        el.className = "inline-msg " + type;
+      }
+
+      function clearInlineMessage(elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = "";
+        el.className = "inline-msg";
+      }
+
+      /* ============================================================
+         4. MODULE 1: TELEPROMPTER LOGIC & PRO EYE-LINE ENGINE
+         ============================================================ */
+      function setTeleprompterLiveBadge(modeText, isLive) {
+        const pill = document.getElementById("tpLiveBadge");
+        const textEl = document.getElementById("tpLiveBadgeText");
+        if (pill) {
+          pill.classList.toggle("is-live", Boolean(isLive));
+        }
+        if (textEl) {
+          textEl.textContent = modeText;
+        }
+      }
+
+      function segmentScriptIntoLines(rawBody) {
+        const paragraphs = String(rawBody || "")
+          .split(/\n+/)
+          .map(function (p) { return p.trim(); })
+          .filter(Boolean);
+
+        const result = [];
+        paragraphs.forEach(function (para, pIdx) {
+          const sentences = para.match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g) || [para];
+          sentences.forEach(function (s, sIdx) {
+            const clean = s.trim();
+            if (!clean) return;
+            result.push({
+              text: clean,
+              isNewParagraph: pIdx > 0 && sIdx === 0
+            });
+          });
+        });
+        return result;
+      }
+
+      function appendTextWithVocalCues(containerEl, text) {
+        const tokenRegex = /(\[[A-Za-z0-9 _\-\/]+\])/g;
+        const parts = String(text || "").split(tokenRegex);
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (!part) continue;
+          if (part.charAt(0) === "[" && part.charAt(part.length - 1) === "]" && part.length > 2) {
+            const cueBadge = document.createElement("span");
+            cueBadge.className = "tp-cue-badge";
+            cueBadge.textContent = part.slice(1, -1).trim();
+            containerEl.appendChild(cueBadge);
+          } else {
+            containerEl.appendChild(document.createTextNode(part));
+          }
+        }
+      }
+
+      function updateActiveEyeLine() {
+        const viewport = document.getElementById("tpViewport");
+        if (!viewport) return;
+
+        const lineEls = viewport.querySelectorAll(".tp-line");
+        const totalLines = lineEls.length;
+        const maxScroll = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        const scrollRatio = maxScroll > 0 ? Math.min(1, Math.max(0, viewport.scrollTop / maxScroll)) : 0;
+
+        // Update top stage laser progress bar
+        const progressFill = document.getElementById("tpStageProgressFill");
+        if (progressFill) {
+          progressFill.style.width = (scrollRatio * 100).toFixed(1) + "%";
+        }
+
+        // Eye-line reading zone center is 36% down from top of viewport
+        const eyeLineCenterY = viewport.scrollTop + viewport.clientHeight * 0.36;
+
+        let closestIdx = 0;
+        let minDistance = Infinity;
+
+        for (let i = 0; i < totalLines; i++) {
+          const el = lineEls[i];
+          const elCenter = el.offsetTop + el.offsetHeight * 0.5;
+          const dist = Math.abs(elCenter - eyeLineCenterY);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestIdx = i;
+          }
+        }
+
+        tpActiveLineIndex = closestIdx;
+
+        for (let i = 0; i < totalLines; i++) {
+          const el = lineEls[i];
+          el.classList.remove("is-eye-focus", "is-near-focus", "is-past", "is-upcoming");
+          if (i === closestIdx) {
+            el.classList.add("is-eye-focus");
+          } else if (Math.abs(i - closestIdx) === 1) {
+            el.classList.add("is-near-focus");
+          } else if (i < closestIdx - 1) {
+            el.classList.add("is-past");
+          } else {
+            el.classList.add("is-upcoming");
+          }
+        }
+
+        // Update HUD Line Counter
+        const lineCounterEl = document.getElementById("tpEyeLineCounter");
+        if (lineCounterEl) {
+          const currentLineNum = totalLines > 0 ? closestIdx + 1 : 0;
+          lineCounterEl.innerHTML = "Line <strong>" + currentLineNum + "</strong> / " + totalLines;
+        }
+
+        // Update HUD Pace & Remaining Time
+        const paceEl = document.getElementById("tpPaceReadout");
+        const estWpm = Math.max(60, Math.round((tpSpeedPxPerSec / 60) * WPM_RATE));
+        if (paceEl) {
+          paceEl.innerHTML = "Pace: <strong>~" + estWpm + " WPM</strong>";
+        }
+
+        const remEl = document.getElementById("tpTimeRemaining");
+        if (remEl) {
+          let remainingSec = 0;
+          if (maxScroll > 4 && tpSpeedPxPerSec > 0) {
+            remainingSec = Math.max(0, (maxScroll - viewport.scrollTop) / tpSpeedPxPerSec);
+          } else {
+            const activeScript = state.scripts.find(function (s) { return s.id === tpSelectedScriptId; });
+            if (activeScript) {
+              const baseSec = countWordsAndSeconds(activeScript.body).seconds;
+              remainingSec = baseSec * (60 / Math.max(15, tpSpeedPxPerSec)) * (1 - scrollRatio);
+            }
+          }
+          remEl.innerHTML = "Remaining: <strong>~" + formatClockMinSec(remainingSec) + "</strong>";
+        }
+      }
+
+      function scrollLineIntoEyeZone(lineEl) {
+        const viewport = document.getElementById("tpViewport");
+        if (!viewport || !lineEl) return;
+        const targetScroll = Math.max(
+          0,
+          lineEl.offsetTop - viewport.clientHeight * 0.36 + lineEl.offsetHeight * 0.5
+        );
+        viewport.scrollTop = targetScroll;
+        tpScrollAccumulator = targetScroll;
+        updateActiveEyeLine();
+      }
+
+      function clearCountdownTimers() {
+        while (tpCountdownTimerIds.length > 0) {
+          clearTimeout(tpCountdownTimerIds.pop());
+        }
+        tpIsCountingDown = false;
+        const overlay = document.getElementById("tpCountdownOverlay");
+        if (overlay) overlay.classList.remove("active");
+      }
+
+      function stopTeleprompterScroll(statusText) {
+        clearCountdownTimers();
+        if (tpRafId !== null) {
+          cancelAnimationFrame(tpRafId);
+          tpRafId = null;
+        }
+        tpIsScrolling = false;
+        tpLastFrameTime = null;
+        const btn = document.getElementById("tpStartPauseBtn");
+        if (btn) {
+          btn.textContent = "▶ Start";
+        }
+        if (statusText) {
+          const statusEl = document.getElementById("tpScrollStatus");
+          if (statusEl) statusEl.textContent = statusText;
+        }
+        if (statusText === "Reached end of script") {
+          setTeleprompterLiveBadge("✓ TAKE COMPLETE", false);
+        } else if (statusText === "Paused") {
+          setTeleprompterLiveBadge("PAUSED", false);
+        } else {
+          setTeleprompterLiveBadge("STANDBY", false);
+        }
+        updateActiveEyeLine();
+      }
+
+      function stepTeleprompterFrame(timestamp) {
+        if (!tpIsScrolling) return;
+
+        const viewport = document.getElementById("tpViewport");
+        if (!viewport) {
+          stopTeleprompterScroll();
+          return;
+        }
+
+        if (tpLastFrameTime === null) {
+          tpLastFrameTime = timestamp;
+          tpScrollAccumulator = viewport.scrollTop;
+        }
+
+        const deltaSec = (timestamp - tpLastFrameTime) / 1000;
+        tpLastFrameTime = timestamp;
+
+        // Guard against huge tab-switch delta spikes
+        const safeDelta = Math.min(deltaSec, 0.25);
+        tpScrollAccumulator += tpSpeedPxPerSec * safeDelta;
+        viewport.scrollTop = tpScrollAccumulator;
+
+        updateActiveEyeLine();
+
+        const maxScroll = viewport.scrollHeight - viewport.clientHeight;
+        if (maxScroll <= 0 || viewport.scrollTop >= maxScroll - 1) {
+          viewport.scrollTop = Math.max(0, maxScroll);
+          updateActiveEyeLine();
+          stopTeleprompterScroll("Reached end of script");
+          return;
+        }
+
+        const pct = maxScroll > 0 ? Math.min(100, Math.round((viewport.scrollTop / maxScroll) * 100)) : 100;
+        const statusEl = document.getElementById("tpScrollStatus");
+        if (statusEl) {
+          statusEl.textContent = "Scrolling · " + pct + "% · Eye-Line Active";
+        }
+
+        tpRafId = requestAnimationFrame(stepTeleprompterFrame);
+      }
+
+      function startTeleprompterWithCountdown() {
+        if (state.scripts.length === 0) return;
+
+        const viewport = document.getElementById("tpViewport");
+        if (!viewport) return;
+
+        // If already at the bottom, reset to top before starting countdown
+        const maxScroll = viewport.scrollHeight - viewport.clientHeight;
+        if (maxScroll > 0 && viewport.scrollTop >= maxScroll - 2) {
+          viewport.scrollTop = 0;
+          tpScrollAccumulator = 0;
+          updateActiveEyeLine();
+        }
+
+        clearCountdownTimers();
+        tpIsCountingDown = true;
+
+        const overlay = document.getElementById("tpCountdownOverlay");
+        const numEl = document.getElementById("tpCountdownNum");
+        const startPauseBtn = document.getElementById("tpStartPauseBtn");
+        const statusEl = document.getElementById("tpScrollStatus");
+
+        if (startPauseBtn) startPauseBtn.textContent = "⏸ Pause";
+        if (statusEl) statusEl.textContent = "Countdown…";
+        setTeleprompterLiveBadge("COUNTDOWN 3-2-1", true);
+        if (overlay) overlay.classList.add("active");
+        if (numEl) numEl.textContent = "3";
+
+        const stepMs = 700;
+        tpCountdownTimerIds.push(
+          setTimeout(function () {
+            if (numEl) numEl.textContent = "2";
+          }, stepMs)
+        );
+        tpCountdownTimerIds.push(
+          setTimeout(function () {
+            if (numEl) numEl.textContent = "1";
+          }, stepMs * 2)
+        );
+        tpCountdownTimerIds.push(
+          setTimeout(function () {
+            clearCountdownTimers();
+            tpIsScrolling = true;
+            tpLastFrameTime = null;
+            tpScrollAccumulator = viewport.scrollTop;
+            if (startPauseBtn) startPauseBtn.textContent = "⏸ Pause";
+            setTeleprompterLiveBadge("● ON AIR · EYE LOCK", true);
+            tpRafId = requestAnimationFrame(stepTeleprompterFrame);
+          }, stepMs * 3)
+        );
+      }
+
+      function toggleTeleprompterPlayPause() {
+        if (state.scripts.length === 0) return;
+        if (tpIsScrolling || tpIsCountingDown) {
+          stopTeleprompterScroll("Paused");
+        } else {
+          startTeleprompterWithCountdown();
+        }
+      }
+
+      function resetTeleprompter() {
+        stopTeleprompterScroll("Ready at top");
+        const viewport = document.getElementById("tpViewport");
+        if (viewport) {
+          viewport.scrollTop = 0;
+          tpScrollAccumulator = 0;
+        }
+        updateActiveEyeLine();
+      }
+
+      function updateTeleprompterSpeed(newSpeed) {
+        const clamped = Math.max(15, Math.min(220, Math.round(Number(newSpeed) || 60)));
+        tpSpeedPxPerSec = clamped;
+        const slider = document.getElementById("tpSpeedSlider");
+        const label = document.getElementById("tpSpeedLabel");
+        if (slider) slider.value = String(clamped);
+        if (label) label.textContent = clamped + " px/sec";
+        updateActiveEyeLine();
+      }
+
+      function updateTeleprompterTextSize(newSize) {
+        const clamped = Math.max(20, Math.min(64, Math.round(Number(newSize) || 34)));
+        tpTextSizePx = clamped;
+        const slider = document.getElementById("tpSizeSlider");
+        const label = document.getElementById("tpSizeLabel");
+        const viewport = document.getElementById("tpViewport");
+        if (slider) slider.value = String(clamped);
+        if (label) label.textContent = clamped + " px";
+        if (viewport) viewport.style.fontSize = clamped + "px";
+        updateActiveEyeLine();
+      }
+
+      function toggleTeleprompterMirror() {
+        tpMirrored = !tpMirrored;
+        const viewport = document.getElementById("tpViewport");
+        const btn = document.getElementById("tpMirrorBtn");
+        if (viewport) {
+          viewport.classList.toggle("mirrored", tpMirrored);
+        }
+        if (btn) {
+          btn.textContent = tpMirrored ? "Mirror: ON" : "Mirror: OFF";
+          btn.setAttribute("aria-pressed", tpMirrored ? "true" : "false");
+          btn.classList.toggle("btn-active-toggle", tpMirrored);
+        }
+      }
+
+      function toggleTeleprompterEyeFocus() {
+        tpEyeFocusEnabled = !tpEyeFocusEnabled;
+        const viewport = document.getElementById("tpViewport");
+        const btn = document.getElementById("tpEyeFocusBtn");
+        if (viewport) {
+          viewport.classList.toggle("eye-focus-enabled", tpEyeFocusEnabled);
+        }
+        if (btn) {
+          btn.textContent = tpEyeFocusEnabled ? "👁 Eye-Line Magnification: ON" : "👁 Eye-Line Magnification: OFF";
+          btn.setAttribute("aria-pressed", tpEyeFocusEnabled ? "true" : "false");
+          btn.classList.toggle("btn-active-toggle", tpEyeFocusEnabled);
+        }
+        updateActiveEyeLine();
+      }
+
+      function toggleTeleprompterColumnWidth() {
+        tpNarrowColumn = !tpNarrowColumn;
+        const viewport = document.getElementById("tpViewport");
+        const btn = document.getElementById("tpColumnWidthBtn");
+        if (viewport) {
+          viewport.classList.toggle("narrow-column", tpNarrowColumn);
+        }
+        if (btn) {
+          btn.textContent = tpNarrowColumn ? "📐 Center Lens Column: ON" : "📐 Center Lens Column: WIDE";
+          btn.setAttribute("aria-pressed", tpNarrowColumn ? "true" : "false");
+          btn.classList.toggle("btn-active-toggle", tpNarrowColumn);
+        }
+        updateActiveEyeLine();
+      }
+
+      function toggleTeleprompterCinemaMode() {
+        tpCinemaMode = !tpCinemaMode;
+        const cardEl = document.getElementById("tpCardContainer");
+        const btn = document.getElementById("tpCinemaBtn");
+        if (cardEl) {
+          cardEl.classList.toggle("cinema-mode", tpCinemaMode);
+        }
+        if (btn) {
+          btn.textContent = tpCinemaMode ? "✕ Exit Focus" : "⛶ Studio Focus";
+          btn.setAttribute("aria-pressed", tpCinemaMode ? "true" : "false");
+          btn.classList.toggle("btn-active-toggle", tpCinemaMode);
+        }
+        setTimeout(updateActiveEyeLine, 60);
+      }
+
+      function syncTeleprompterRecordedBtn() {
+        const btn = document.getElementById("tpMarkRecordedBtn");
+        if (!btn) return;
+        if (!tpSelectedScriptId || state.scripts.length === 0) {
+          btn.disabled = true;
+          btn.textContent = "○ Mark Recorded";
+          btn.classList.remove("btn-active-toggle");
+          return;
+        }
+        btn.disabled = false;
+        const checkState = state.checks[tpSelectedScriptId] || { recorded: false, posted: false };
+        const isRec = Boolean(checkState.recorded);
+        btn.textContent = isRec ? "✓ Recorded" : "○ Mark Recorded";
+        btn.classList.toggle("btn-active-toggle", isRec);
+      }
+
+      function loadScriptIntoTeleprompter(scriptId) {
+        if (!scriptId) return;
+        tpSelectedScriptId = scriptId;
+        switchTab("teleprompter");
+        resetTeleprompter();
+        renderTeleprompter();
+      }
+
+      function renderTeleprompter() {
+        const selectEl = document.getElementById("tpScriptSelect");
+        const viewportEl = document.getElementById("tpViewport");
+        const metaEl = document.getElementById("tpScriptMeta");
+        const startBtn = document.getElementById("tpStartPauseBtn");
+        const resetBtn = document.getElementById("tpResetBtn");
+
+        if (!selectEl || !viewportEl) return;
+
+        const sorted = getSortedScripts();
+        selectEl.innerHTML = "";
+
+        if (sorted.length === 0) {
+          stopTeleprompterScroll("No scripts available");
+          tpSelectedScriptId = null;
+
+          const emptyOpt = document.createElement("option");
+          emptyOpt.value = "";
+          emptyOpt.textContent = "No scripts available";
+          selectEl.appendChild(emptyOpt);
+          selectEl.disabled = true;
+
+          if (startBtn) startBtn.disabled = true;
+          if (resetBtn) resetBtn.disabled = true;
+          if (metaEl) metaEl.textContent = "0 words · ~0 sec";
+          syncTeleprompterRecordedBtn();
+
+          viewportEl.innerHTML = "";
+          const emptyDiv = document.createElement("div");
+          emptyDiv.className = "tp-empty-msg";
+          emptyDiv.textContent = "No scripts yet — add one in the Script Manager below.";
+          viewportEl.appendChild(emptyDiv);
+          updateActiveEyeLine();
+          return;
+        }
+
+        selectEl.disabled = false;
+        if (startBtn) startBtn.disabled = false;
+        if (resetBtn) resetBtn.disabled = false;
+
+        const stillExists = sorted.some(function (s) {
+          return s.id === tpSelectedScriptId;
+        });
+        if (!stillExists) {
+          tpSelectedScriptId = sorted[0].id;
+        }
+
+        sorted.forEach(function (script) {
+          const opt = document.createElement("option");
+          opt.value = script.id;
+          const isRec = Boolean(state.checks[script.id] && state.checks[script.id].recorded);
+          opt.textContent = (script.starred ? "⭐ " : "") + script.title + (isRec ? " [✓ Rec]" : "");
+          if (script.id === tpSelectedScriptId) {
+            opt.selected = true;
+          }
+          selectEl.appendChild(opt);
+        });
+
+        const activeScript = sorted.find(function (s) {
+          return s.id === tpSelectedScriptId;
+        }) || sorted[0];
+
+        if (metaEl) {
+          metaEl.textContent = formatWordReadout(activeScript.body);
+        }
+        syncTeleprompterRecordedBtn();
+
+        // Build segmented eye-line DOM nodes inside .tp-lines-track
+        viewportEl.innerHTML = "";
+        const trackEl = document.createElement("div");
+        trackEl.className = "tp-lines-track";
+
+        const segmentedLines = segmentScriptIntoLines(activeScript.body);
+        segmentedLines.forEach(function (lineObj, idx) {
+          const lineDiv = document.createElement("div");
+          lineDiv.className = "tp-line" + (lineObj.isNewParagraph ? " tp-para-gap" : "");
+          lineDiv.setAttribute("data-line-idx", String(idx));
+          lineDiv.title = "Click to align this line into the Eye-Line Viewer Zone";
+          appendTextWithVocalCues(lineDiv, lineObj.text);
+
+          lineDiv.addEventListener("click", function () {
+            scrollLineIntoEyeZone(lineDiv);
+          });
+
+          trackEl.appendChild(lineDiv);
+        });
+
+        viewportEl.appendChild(trackEl);
+        updateActiveEyeLine();
+      }
+
+      /* ============================================================
+         5. MODULE 2: COMMAND CENTER & PERFORMANCE DASHBOARD
+         ============================================================ */
+      let heatmapWeeksCount = 52;
+      let selectedHeatmapDate = null;
+      let flashNewestPostRow = false;
+
+      const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      function triggerStatBump(el) {
+        if (!el) return;
+        el.classList.remove("stat-bump");
+        void el.offsetWidth;
+        el.classList.add("stat-bump");
+      }
+
+      function parseLocalDateStr(dateStr) {
+        const parts = String(dateStr || "").split("-");
+        if (parts.length !== 3) return null;
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      }
+
+      function formatHumanDate(dateStr, todayStr) {
+        const dt = parseLocalDateStr(dateStr);
+        if (!dt || isNaN(dt.getTime())) return dateStr;
+        const label = SHORT_DAYS[dt.getDay()] + ", " + SHORT_MONTHS[dt.getMonth()] + " " + dt.getDate() + ", " + dt.getFullYear();
+        return dateStr === todayStr ? label + " (Today)" : label;
+      }
+
+      function calculateLongestStreak() {
+        if (!state.posts || state.posts.length === 0) return 0;
+        const uniqueDates = Array.from(
+          new Set(
+            state.posts
+              .map(function (p) { return p && p.date; })
+              .filter(function (d) { return /^\d{4}-\d{2}-\d{2}$/.test(d); })
+          )
+        ).sort();
+
+        if (uniqueDates.length === 0) return 0;
+
+        let best = 1;
+        let current = 1;
+        for (let i = 1; i < uniqueDates.length; i++) {
+          const prev = parseLocalDateStr(uniqueDates[i - 1]);
+          const curr = parseLocalDateStr(uniqueDates[i]);
+          const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+          if (diffDays === 1) {
+            current += 1;
+            if (current > best) best = current;
+          } else if (diffDays > 1) {
+            current = 1;
+          }
+        }
+        return best;
+      }
+
+      function renderInspectorForDate(dateStr, postsByDate, todayStr) {
+        const inspectorEl = document.getElementById("heatmapInspector");
+        if (!inspectorEl) return;
+
+        const entries = postsByDate[dateStr] || [];
+        const humanDate = formatHumanDate(dateStr, todayStr);
+        inspectorEl.innerHTML = "";
+
+        const strongDate = document.createElement("strong");
+        strongDate.style.color = "var(--gold)";
+        strongDate.style.fontFamily = "var(--font-mono)";
+        strongDate.textContent = humanDate;
+        inspectorEl.appendChild(strongDate);
+
+        const detailSpan = document.createElement("span");
+        if (entries.length === 0) {
+          detailSpan.className = "muted";
+          detailSpan.textContent = "— 0 posts logged (click square to pre-fill date in Log Post form)";
+        } else {
+          const summaries = entries.slice(0, 3).map(function (p) {
+            return '"' + p.title + '" (' + p.platform + ")";
+          });
+          const extra = entries.length > 3 ? " +" + (entries.length - 3) + " more" : "";
+          detailSpan.textContent = "— " + entries.length + (entries.length === 1 ? " post shipped: " : " posts shipped: ") + summaries.join(", ") + extra;
+        }
+        inspectorEl.appendChild(detailSpan);
+      }
+
+      function renderPerformanceDashboard() {
+        const weeksGridEl = document.getElementById("heatmapWeeksGrid");
+        const monthsRowEl = document.getElementById("heatmapMonthsRow");
+        const scrollWrapper = document.getElementById("heatmapScrollWrapper");
+        if (!weeksGridEl || !monthsRowEl) return;
+
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayStr = formatLocalDate(today);
+
+        // Group posts by local YYYY-MM-DD
+        const postsByDate = {};
+        const platformCounts = { Instagram: 0, LinkedIn: 0, YouTube: 0, TikTok: 0 };
+
+        state.posts.forEach(function (p) {
+          if (!p || !p.date) return;
+          if (!postsByDate[p.date]) postsByDate[p.date] = [];
+          postsByDate[p.date].push(p);
+          if (platformCounts[p.platform] !== undefined) {
+            platformCounts[p.platform] += 1;
+          }
+        });
+
+        // Compute 7-day, prev-7-day, and 30-day metrics
+        let postsLast7 = 0;
+        let postsPrev7 = 0;
+        let postsLast30 = 0;
+        let activeDaysLast30 = 0;
+
+        for (let d = 0; d < 30; d++) {
+          const dt = new Date(today.getFullYear(), today.getMonth(), today.getDate() - d);
+          const dStr = formatLocalDate(dt);
+          const count = postsByDate[dStr] ? postsByDate[dStr].length : 0;
+          if (d < 7) {
+            postsLast7 += count;
+          } else if (d < 14) {
+            postsPrev7 += count;
+          }
+          postsLast30 += count;
+          if (count > 0) activeDaysLast30 += 1;
+        }
+
+        const totalActiveDaysAllTime = Object.keys(postsByDate).length;
+        const currentStreak = calculateDayStreak();
+        const bestStreak = calculateLongestStreak();
+        const todayCount = postsByDate[todayStr] ? postsByDate[todayStr].length : 0;
+
+        // Pipeline stats
+        const totalScripts = state.scripts.length;
+        let recordedCount = 0;
+        let postedScriptsCount = 0;
+        state.scripts.forEach(function (s) {
+          const chk = state.checks[s.id] || { recorded: false, posted: false };
+          if (chk.recorded) recordedCount += 1;
+          if (chk.posted) postedScriptsCount += 1;
+        });
+
+        // Composite All-Round Performance Index (0-100)
+        const velocityScore = Math.min(35, Math.round((postsLast7 / 7) * 35));
+        const consistencyScore = Math.min(30, Math.round((activeDaysLast30 / 20) * 30));
+        const streakScore = Math.min(20, Math.round((currentStreak / 7) * 20));
+        const pipelineScore = totalScripts > 0
+          ? Math.min(15, Math.round(((recordedCount * 0.5 + postedScriptsCount * 0.5) / totalScripts) * 15))
+          : 0;
+        const overallScore = Math.min(100, velocityScore + consistencyScore + streakScore + pipelineScore);
+
+        let tierText = "D-TIER · COLD START";
+        if (overallScore >= 85) {
+          tierText = "S-TIER · UNSTOPPABLE";
+        } else if (overallScore >= 65) {
+          tierText = "A-TIER · HIGH VELOCITY";
+        } else if (overallScore >= 40) {
+          tierText = "B-TIER · BUILDING MOMENTUM";
+        } else if (overallScore >= 15) {
+          tierText = "C-TIER · WARMING UP";
+        }
+
+        // Diagnostic message
+        let diagnostic = "";
+        if (state.posts.length === 0 && recordedCount === 0) {
+          diagnostic = "Zero commits on the board. Record 1 script in the Teleprompter and log your first post today.";
+        } else if (todayCount === 0 && currentStreak > 0) {
+          diagnostic = "Streak at risk (" + currentStreak + "d active). Log 1 post today to keep your daily chain alive.";
+        } else if (todayCount > 0) {
+          diagnostic = "Today's commit locked in (" + todayCount + (todayCount === 1 ? " post" : " posts") + " shipped today). Active streak: " + currentStreak + "d · Best: " + bestStreak + "d.";
+        } else if (recordedCount > postedScriptsCount) {
+          const readyToPost = recordedCount - postedScriptsCount;
+          diagnostic = "You have " + readyToPost + " recorded " + (readyToPost === 1 ? "script" : "scripts") + " waiting to be published. Ship one today.";
+        } else {
+          diagnostic = postsLast7 + " posts shipped in the last 7 days · " + activeDaysLast30 + "/30 active days this month.";
+        }
+
+        const tierBadgeEl = document.getElementById("perfTierBadge");
+        const todayPillEl = document.getElementById("perfTodayCommitPill");
+        const diagEl = document.getElementById("perfDiagnosticText");
+        const scoreEl = document.getElementById("perfOverallScore");
+
+        if (tierBadgeEl) tierBadgeEl.textContent = tierText;
+        if (todayPillEl) {
+          todayPillEl.textContent = todayCount > 0
+            ? "✓ Today: " + todayCount + (todayCount === 1 ? " post committed" : " posts committed")
+            : "Today: No commit yet";
+          todayPillEl.classList.toggle("committed", todayCount > 0);
+        }
+        if (diagEl) diagEl.textContent = diagnostic;
+        if (scoreEl) scoreEl.textContent = String(overallScore);
+
+        // Build GitHub-style Monday-first weekly columns
+        const dayOfWeekMon0 = (today.getDay() + 6) % 7; // 0 = Mon ... 6 = Sun
+        const currentWeekMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeekMon0);
+        const startMonday = new Date(
+          currentWeekMonday.getFullYear(),
+          currentWeekMonday.getMonth(),
+          currentWeekMonday.getDate() - (heatmapWeeksCount - 1) * 7
+        );
+
+        weeksGridEl.innerHTML = "";
+        monthsRowEl.innerHTML = "";
+        monthsRowEl.style.gridTemplateColumns = "repeat(" + heatmapWeeksCount + ", 14px)";
+
+        let lastLabeledMonth = -1;
+        let lastLabelCol = -10;
+
+        for (let col = 0; col < heatmapWeeksCount; col++) {
+          const weekMonday = new Date(
+            startMonday.getFullYear(),
+            startMonday.getMonth(),
+            startMonday.getDate() + col * 7
+          );
+
+          // Month label above column
+          const monthCell = document.createElement("span");
+          monthCell.className = "heatmap-month-label";
+          const mIdx = weekMonday.getMonth();
+          if (mIdx !== lastLabeledMonth && col - lastLabelCol >= 2) {
+            monthCell.textContent = SHORT_MONTHS[mIdx];
+            lastLabeledMonth = mIdx;
+            lastLabelCol = col;
+          }
+          monthsRowEl.appendChild(monthCell);
+
+          const weekColEl = document.createElement("div");
+          weekColEl.className = "heatmap-week-col";
+          weekColEl.setAttribute("role", "row");
+
+          for (let row = 0; row < 7; row++) {
+            const cellDate = new Date(
+              weekMonday.getFullYear(),
+              weekMonday.getMonth(),
+              weekMonday.getDate() + row
+            );
+            const cellDateStr = formatLocalDate(cellDate);
+            const isFuture = cellDate.getTime() > today.getTime();
+            const isToday = cellDateStr === todayStr;
+            const dayPosts = postsByDate[cellDateStr] || [];
+            const cnt = dayPosts.length;
+            const level = cnt === 0 ? 0 : cnt === 1 ? 1 : cnt === 2 ? 2 : cnt === 3 ? 3 : 4;
+
+            const cellBtn = document.createElement("button");
+            cellBtn.type = "button";
+            cellBtn.className = "heatmap-cell" +
+              (isToday ? " is-today" : "") +
+              (isFuture ? " is-future" : "") +
+              (selectedHeatmapDate === cellDateStr ? " selected" : "");
+            cellBtn.setAttribute("data-level", String(level));
+            cellBtn.setAttribute("data-date", cellDateStr);
+            cellBtn.title = formatHumanDate(cellDateStr, todayStr) + ": " + cnt + (cnt === 1 ? " post" : " posts");
+            cellBtn.setAttribute("aria-label", cellBtn.title);
+
+            if (!isFuture) {
+              cellBtn.addEventListener("mouseenter", function () {
+                renderInspectorForDate(cellDateStr, postsByDate, todayStr);
+              });
+              cellBtn.addEventListener("focus", function () {
+                renderInspectorForDate(cellDateStr, postsByDate, todayStr);
+              });
+              cellBtn.addEventListener("click", function () {
+                selectedHeatmapDate = cellDateStr;
+                const dateInput = document.getElementById("postDateInput");
+                if (dateInput) dateInput.value = cellDateStr;
+                renderPerformanceDashboard();
+                renderInspectorForDate(cellDateStr, postsByDate, todayStr);
+              });
+            }
+
+            weekColEl.appendChild(cellBtn);
+          }
+
+          weeksGridEl.appendChild(weekColEl);
+        }
+
+        // Update inspector with selected date or today
+        renderInspectorForDate(selectedHeatmapDate || todayStr, postsByDate, todayStr);
+
+        // Scroll heatmap to right (most recent week) automatically
+        if (scrollWrapper) {
+          requestAnimationFrame(function () {
+            scrollWrapper.scrollLeft = scrollWrapper.scrollWidth;
+          });
+        }
+
+        // Update 4 Breakdown Mini-Cards
+        // 1. 7-Day Velocity
+        const weeklyValEl = document.getElementById("perfWeeklyVal");
+        const weeklyBarEl = document.getElementById("perfWeeklyBar");
+        const weeklyDeltaEl = document.getElementById("perfWeeklyDelta");
+        const activeYearEl = document.getElementById("perfActiveDaysYear");
+
+        if (weeklyValEl) {
+          weeklyValEl.innerHTML = '<span class="gold">' + postsLast7 + "</span> / 7 target";
+        }
+        if (weeklyBarEl) {
+          weeklyBarEl.style.width = Math.min(100, Math.round((postsLast7 / 7) * 100)) + "%";
+        }
+        if (weeklyDeltaEl) {
+          const diff = postsLast7 - postsPrev7;
+          weeklyDeltaEl.textContent = diff > 0
+            ? "▲ +" + diff + " vs prior 7 days"
+            : diff < 0
+              ? "▼ " + diff + " vs prior 7 days"
+              : "Same pace as prior 7 days";
+        }
+        if (activeYearEl) {
+          activeYearEl.textContent = totalActiveDaysAllTime + (totalActiveDaysAllTime === 1 ? " active day total" : " active days total");
+        }
+
+        // 2. 30-Day Consistency & Best Streak
+        const monthlyPct = Math.round((activeDaysLast30 / 30) * 100);
+        const monthlyValEl = document.getElementById("perfMonthlyVal");
+        const monthlyBarEl = document.getElementById("perfMonthlyBar");
+        const bestStreakEl = document.getElementById("perfBestStreak");
+        const avgPerWeekEl = document.getElementById("perfAvgPerWeek");
+
+        if (monthlyValEl) {
+          monthlyValEl.innerHTML = '<span class="gold">' + monthlyPct + "%</span> (" + activeDaysLast30 + "/30d)";
+        }
+        if (monthlyBarEl) {
+          monthlyBarEl.style.width = Math.min(100, monthlyPct) + "%";
+        }
+        if (bestStreakEl) {
+          bestStreakEl.textContent = "Best streak: " + bestStreak + (bestStreak === 1 ? " day" : " days");
+        }
+        if (avgPerWeekEl) {
+          const avgWk = ((postsLast30 / 30) * 7).toFixed(1);
+          avgPerWeekEl.textContent = avgWk + " posts/wk avg (30d)";
+        }
+
+        // 3. Platform Distribution Mix
+        const topPlatEl = document.getElementById("perfTopPlatformVal");
+        const stackedBarEl = document.getElementById("perfPlatformStackedBar");
+        const legendEl = document.getElementById("perfPlatformLegend");
+        const totalPosts = state.posts.length;
+
+        if (stackedBarEl) {
+          stackedBarEl.innerHTML = "";
+          if (totalPosts === 0) {
+            const emptyBar = document.createElement("div");
+            emptyBar.className = "perf-mini-bar-fill";
+            emptyBar.style.width = "0%";
+            stackedBarEl.appendChild(emptyBar);
+          } else {
+            const segments = [
+              { key: "Instagram", cls: "seg-instagram" },
+              { key: "LinkedIn", cls: "seg-linkedin" },
+              { key: "YouTube", cls: "seg-youtube" },
+              { key: "TikTok", cls: "seg-tiktok" }
+            ];
+            segments.forEach(function (seg) {
+              const c = platformCounts[seg.key] || 0;
+              if (c > 0) {
+                const div = document.createElement("div");
+                div.className = seg.cls;
+                div.style.width = ((c / totalPosts) * 100) + "%";
+                div.title = seg.key + ": " + c;
+                stackedBarEl.appendChild(div);
+              }
+            });
+          }
+        }
+
+        if (topPlatEl) {
+          if (totalPosts === 0) {
+            topPlatEl.textContent = "No posts yet";
+          } else {
+            let bestPlat = "Instagram";
+            VALID_PLATFORMS.forEach(function (pl) {
+              if (platformCounts[pl] > platformCounts[bestPlat]) {
+                bestPlat = pl;
+              }
+            });
+            const topPct = Math.round((platformCounts[bestPlat] / totalPosts) * 100);
+            topPlatEl.innerHTML = '<span class="gold">' + bestPlat + "</span> (" + topPct + "%)";
+          }
+        }
+
+        if (legendEl) {
+          legendEl.innerHTML =
+            '<span><i class="mix-dot" style="background:#e1306c;"></i>IG: ' + platformCounts.Instagram + "</span>" +
+            '<span><i class="mix-dot" style="background:#3894f0;"></i>LI: ' + platformCounts.LinkedIn + "</span>" +
+            '<span><i class="mix-dot" style="background:#ff4646;"></i>YT: ' + platformCounts.YouTube + "</span>" +
+            '<span><i class="mix-dot" style="background:#2de2e6;"></i>TT: ' + platformCounts.TikTok + "</span>";
+        }
+
+        // 4. Script Pipeline Execution
+        const pipeValEl = document.getElementById("perfPipelineVal");
+        const pipeBarEl = document.getElementById("perfPipelineBar");
+        const pipeRecSub = document.getElementById("perfPipelineRecSub");
+        const pipePostSub = document.getElementById("perfPipelinePostSub");
+
+        const recPct = totalScripts > 0 ? Math.round((recordedCount / totalScripts) * 100) : 0;
+        const postPct = totalScripts > 0 ? Math.round((postedScriptsCount / totalScripts) * 100) : 0;
+
+        if (pipeValEl) {
+          pipeValEl.innerHTML = '<span class="gold">' + postPct + "%</span> posted";
+        }
+        if (pipeBarEl) {
+          pipeBarEl.style.width = postPct + "%";
+        }
+        if (pipeRecSub) {
+          pipeRecSub.textContent = "Recorded: " + recordedCount + "/" + totalScripts + " (" + recPct + "%)";
+        }
+        if (pipePostSub) {
+          pipePostSub.textContent = "Posted: " + postedScriptsCount + "/" + totalScripts + " (" + postPct + "%)";
+        }
+      }
+
+      function renderStats(animateBump) {
+        const publishedCount = state.posts.length;
+        const totalScripts = state.scripts.length;
+
+        let recordedCount = 0;
+        let unpostedScriptsCount = 0;
+
+        state.scripts.forEach(function (s) {
+          const chk = state.checks[s.id] || { recorded: false, posted: false };
+          if (chk.recorded) recordedCount += 1;
+          if (!chk.posted) unpostedScriptsCount += 1;
+        });
+
+        const streakDays = calculateDayStreak();
+
+        // 1. Posts Published
+        const statPostsEl = document.getElementById("statPostsPublished");
+        if (statPostsEl) {
+          statPostsEl.innerHTML = '<span class="gold">' + publishedCount + "</span>/" + GOAL_POSTS;
+          if (animateBump) triggerStatBump(statPostsEl);
+        }
+
+        // 2. Drafts Ready
+        const statDraftsEl = document.getElementById("statDraftsReady");
+        const statDraftsSub = document.getElementById("statDraftsSub");
+        if (statDraftsEl) {
+          statDraftsEl.textContent = String(unpostedScriptsCount);
+          if (animateBump) triggerStatBump(statDraftsEl);
+        }
+        if (statDraftsSub) {
+          statDraftsSub.textContent = unpostedScriptsCount === 1 ? "1 script ready to ship" : unpostedScriptsCount + " unposted in library";
+        }
+
+        // 3. Day Streak
+        const statStreakEl = document.getElementById("statDayStreak");
+        const statStreakSub = document.getElementById("statStreakSub");
+        if (statStreakEl) {
+          statStreakEl.innerHTML = '<span class="gold">' + streakDays + "</span>" + (streakDays === 1 ? " day" : " days");
+          if (animateBump) triggerStatBump(statStreakEl);
+        }
+        if (statStreakSub) {
+          statStreakSub.textContent = streakDays > 0 ? "Keep the chain unbroken" : "Log a post today to start";
+        }
+
+        // 4. Scripts Recorded
+        const statRecordedEl = document.getElementById("statScriptsRecorded");
+        if (statRecordedEl) {
+          statRecordedEl.textContent = recordedCount + "/" + totalScripts;
+          if (animateBump) triggerStatBump(statRecordedEl);
+        }
+
+        // 5. 100-Post Goal Progress Bar
+        const rawPct = (publishedCount / GOAL_POSTS) * 100;
+        const displayPct = Math.min(100, Math.round(rawPct));
+        const remaining = Math.max(0, GOAL_POSTS - publishedCount);
+
+        const pctTextEl = document.getElementById("goalPercentText");
+        const remTextEl = document.getElementById("goalRemainingText");
+        const fillEl = document.getElementById("goalProgressFill");
+        const trackEl = document.getElementById("goalProgressBarTrack");
+
+        if (pctTextEl) pctTextEl.textContent = displayPct + "%";
+        if (remTextEl) remTextEl.textContent = remaining === 0 ? "Goal crushed!" : remaining + " to go";
+        if (fillEl) fillEl.style.width = Math.min(100, Math.max(0, rawPct)) + "%";
+        if (trackEl) trackEl.setAttribute("aria-valuenow", String(displayPct));
+
+        renderPerformanceDashboard();
+      }
+
+      function renderPostsTable() {
+        const container = document.getElementById("recentPostsContainer");
+        const subEl = document.getElementById("recentPostsSub");
+        if (!container) return;
+
+        container.innerHTML = "";
+
+        if (state.posts.length === 0) {
+          if (subEl) subEl.textContent = "Newest first · 0 logged";
+          const empty = document.createElement("div");
+          empty.className = "empty-state-box";
+          empty.textContent = "No posts logged yet — your first one counts double.";
+          container.appendChild(empty);
+          return;
+        }
+
+        // Sort newest first by date, preserving insertion order (index 0 = newest) for ties
+        const indexedPosts = state.posts.map(function (post, idx) {
+          return { post: post, originalIndex: idx };
+        });
+
+        indexedPosts.sort(function (a, b) {
+          if (a.post.date !== b.post.date) {
+            return a.post.date < b.post.date ? 1 : -1;
+          }
+          return a.originalIndex - b.originalIndex;
+        });
+
+        const capped = indexedPosts.slice(0, 30);
+        if (subEl) {
+          subEl.textContent = state.posts.length > 30
+            ? "Showing latest 30 of " + state.posts.length + " logged posts"
+            : "Showing " + state.posts.length + (state.posts.length === 1 ? " logged post" : " logged posts");
+        }
+
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+
+        const table = document.createElement("table");
+        table.className = "studio-table";
+
+        const thead = document.createElement("thead");
+        thead.innerHTML = "<tr><th>Date</th><th>Title</th><th>Platform</th><th style='text-align:right;'>Delete</th></tr>";
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        capped.forEach(function (entry) {
+          const tr = document.createElement("tr");
+          if (flashNewestPostRow && entry.originalIndex === 0) {
+            tr.className = "row-flash";
+          }
+
+          const tdDate = document.createElement("td");
+          tdDate.style.fontFamily = "var(--font-mono)";
+          tdDate.style.whiteSpace = "nowrap";
+          tdDate.style.color = "var(--muted)";
+          tdDate.textContent = entry.post.date;
+
+          const tdTitle = document.createElement("td");
+          tdTitle.style.fontWeight = "600";
+          tdTitle.textContent = entry.post.title;
+
+          const tdPlatform = document.createElement("td");
+          const pill = document.createElement("span");
+          pill.className = "platform-pill";
+          pill.setAttribute("data-platform", entry.post.platform);
+          pill.textContent = entry.post.platform;
+          tdPlatform.appendChild(pill);
+
+          const tdDel = document.createElement("td");
+          tdDel.style.textAlign = "right";
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "delete-icon-btn";
+          delBtn.setAttribute("aria-label", "Delete post " + entry.post.title);
+          delBtn.textContent = "✕";
+          delBtn.addEventListener("click", function () {
+            if (window.confirm('Delete logged post "' + entry.post.title + '"?')) {
+              state.posts.splice(entry.originalIndex, 1);
+              saveState();
+              renderAll(true);
+            }
+          });
+          tdDel.appendChild(delBtn);
+
+          tr.appendChild(tdDate);
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdPlatform);
+          tr.appendChild(tdDel);
+          tbody.appendChild(tr);
+        });
+
+        flashNewestPostRow = false;
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        container.appendChild(wrap);
+      }
+
+      function renderLibrary() {
+        const container = document.getElementById("scriptLibraryContainer");
+        if (!container) return;
+
+        container.innerHTML = "";
+        const sorted = getSortedScripts();
+
+        if (sorted.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state-box";
+          empty.textContent = "No scripts in the library yet — add your first script in the Script Manager below.";
+          container.appendChild(empty);
+          return;
+        }
+
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+
+        const table = document.createElement("table");
+        table.className = "studio-table";
+
+        const thead = document.createElement("thead");
+        thead.innerHTML = "<tr><th style='width:48px;'>#</th><th>Title</th><th style='width:130px;'>Recorded</th><th style='width:130px;'>Posted</th></tr>";
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        sorted.forEach(function (script, idx) {
+          if (!state.checks[script.id]) {
+            state.checks[script.id] = { recorded: false, posted: false };
+          }
+          const checkState = state.checks[script.id];
+
+          const tr = document.createElement("tr");
+
+          const tdNum = document.createElement("td");
+          tdNum.style.fontFamily = "var(--font-mono)";
+          tdNum.style.color = "var(--muted)";
+          tdNum.textContent = String(idx + 1);
+
+          const tdTitle = document.createElement("td");
+          tdTitle.style.fontWeight = "600";
+          tdTitle.textContent = (script.starred ? "⭐ " : "") + script.title;
+
+          const tdRecorded = document.createElement("td");
+          const recLabel = document.createElement("label");
+          recLabel.className = "check-cell-label";
+          const recInput = document.createElement("input");
+          recInput.type = "checkbox";
+          recInput.checked = Boolean(checkState.recorded);
+          recInput.setAttribute("aria-label", "Mark " + script.title + " as recorded");
+          recInput.addEventListener("change", function () {
+            state.checks[script.id].recorded = recInput.checked;
+            saveState();
+            renderStats(true);
+            renderTeleprompter();
+            triggerStatBump(document.getElementById("perfOverallScore"));
+          });
+          const recSpan = document.createElement("span");
+          recSpan.textContent = "Recorded";
+          recLabel.appendChild(recInput);
+          recLabel.appendChild(recSpan);
+          tdRecorded.appendChild(recLabel);
+
+          const tdPosted = document.createElement("td");
+          const postLabel = document.createElement("label");
+          postLabel.className = "check-cell-label";
+          const postInput = document.createElement("input");
+          postInput.type = "checkbox";
+          postInput.checked = Boolean(checkState.posted);
+          postInput.setAttribute("aria-label", "Mark " + script.title + " as posted");
+          postInput.addEventListener("change", function () {
+            state.checks[script.id].posted = postInput.checked;
+            saveState();
+            renderStats(true);
+            triggerStatBump(document.getElementById("perfOverallScore"));
+          });
+          const postSpan = document.createElement("span");
+          postSpan.textContent = "Posted";
+          postLabel.appendChild(postInput);
+          postLabel.appendChild(postSpan);
+          tdPosted.appendChild(postLabel);
+
+          tr.appendChild(tdNum);
+          tr.appendChild(tdTitle);
+          tr.appendChild(tdRecorded);
+          tr.appendChild(tdPosted);
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        container.appendChild(wrap);
+      }
+
+      /* ============================================================
+         6. SCRIPT MANAGER RENDERING & ACTIONS
+         ============================================================ */
+      const HOOK_TEMPLATES = {
+        contrarian: "Everyone tells you to [common advice], but that is actually keeping you stuck. [PAUSE]\n\nHere is what high performers do instead: ",
+        mistake: "Stop making this expensive mistake with your [topic]. [PAUSE]\n\nMost builders waste six months doing this the hard way because ",
+        framework: "If I had to start from zero today, I would only follow these three rules: [PAUSE]\n\nRule number one: [EMPHASIS] "
+      };
+
+      function insertTextIntoScriptBody(snippet) {
+        const bodyInput = document.getElementById("smBodyInput");
+        if (!bodyInput) return;
+        const start = typeof bodyInput.selectionStart === "number" ? bodyInput.selectionStart : bodyInput.value.length;
+        const end = typeof bodyInput.selectionEnd === "number" ? bodyInput.selectionEnd : bodyInput.value.length;
+        const before = bodyInput.value.slice(0, start);
+        const after = bodyInput.value.slice(end);
+        const needsLeadingSpace = before.length > 0 && !/\s$/.test(before);
+        const insertStr = (needsLeadingSpace ? " " : "") + snippet + " ";
+        bodyInput.value = before + insertStr + after;
+        const newCursor = before.length + insertStr.length;
+        bodyInput.focus();
+        bodyInput.setSelectionRange(newCursor, newCursor);
+        updateScriptManagerHelper();
+      }
+
+      function updateScriptManagerHelper() {
+        const bodyInput = document.getElementById("smBodyInput");
+        const helperEl = document.getElementById("smWordHelper");
+        if (!bodyInput || !helperEl) return;
+        helperEl.textContent = formatWordReadout(bodyInput.value);
+      }
+
+      function enterScriptEditMode(scriptId) {
+        const target = state.scripts.find(function (s) {
+          return s.id === scriptId;
+        });
+        if (!target) return;
+
+        editingScriptId = target.id;
+        clearInlineMessage("smFeedbackMsg");
+
+        const titleInput = document.getElementById("smTitleInput");
+        const bodyInput = document.getElementById("smBodyInput");
+        const starredInput = document.getElementById("smStarredInput");
+        const submitBtn = document.getElementById("smSubmitBtn");
+        const cancelBtn = document.getElementById("smCancelEditBtn");
+        const headingEl = document.getElementById("smFormHeading");
+
+        if (titleInput) titleInput.value = target.title;
+        if (bodyInput) bodyInput.value = target.body;
+        if (starredInput) starredInput.checked = Boolean(target.starred);
+        if (submitBtn) submitBtn.textContent = "Save changes";
+        if (cancelBtn) cancelBtn.style.display = "inline-flex";
+        if (headingEl) headingEl.textContent = "Script Manager — Editing Script";
+
+        updateScriptManagerHelper();
+        renderScriptManagerList();
+
+        const card = document.getElementById("scriptManagerCard");
+        if (card && typeof card.scrollIntoView === "function") {
+          card.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (titleInput) titleInput.focus();
+      }
+
+      function exitScriptEditMode() {
+        editingScriptId = null;
+        const titleInput = document.getElementById("smTitleInput");
+        const bodyInput = document.getElementById("smBodyInput");
+        const starredInput = document.getElementById("smStarredInput");
+        const submitBtn = document.getElementById("smSubmitBtn");
+        const cancelBtn = document.getElementById("smCancelEditBtn");
+        const headingEl = document.getElementById("smFormHeading");
+
+        if (titleInput) titleInput.value = "";
+        if (bodyInput) bodyInput.value = "";
+        if (starredInput) starredInput.checked = false;
+        if (submitBtn) submitBtn.textContent = "＋ Add Script";
+        if (cancelBtn) cancelBtn.style.display = "none";
+        if (headingEl) headingEl.textContent = "Script Manager — ＋ New Script";
+
+        updateScriptManagerHelper();
+        renderScriptManagerList();
+      }
+
+      function renderScriptManagerList() {
+        const listEl = document.getElementById("smListContainer");
+        if (!listEl) return;
+
+        listEl.innerHTML = "";
+        const sorted = getSortedScripts();
+
+        if (sorted.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state-box";
+          empty.textContent = "Zero scripts in the vault. Write your first camera script above.";
+          listEl.appendChild(empty);
+          return;
+        }
+
+        sorted.forEach(function (script) {
+          const row = document.createElement("div");
+          row.className = "sm-row" + (editingScriptId === script.id ? " editing" : "");
+
+          const info = document.createElement("div");
+          info.className = "sm-row-info";
+
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "sm-row-title";
+          titleDiv.textContent = (script.starred ? "⭐ " : "") + script.title;
+
+          const metaDiv = document.createElement("div");
+          metaDiv.className = "sm-row-meta";
+          metaDiv.textContent = formatWordReadout(script.body);
+
+          info.appendChild(titleDiv);
+          info.appendChild(metaDiv);
+
+          const actions = document.createElement("div");
+          actions.className = "sm-row-actions";
+
+          const prompterBtn = document.createElement("button");
+          prompterBtn.type = "button";
+          prompterBtn.className = "btn btn-sm";
+          prompterBtn.textContent = "🎬 Prompter";
+          prompterBtn.title = "Load this script directly into the Teleprompter";
+          prompterBtn.addEventListener("click", function () {
+            loadScriptIntoTeleprompter(script.id);
+          });
+
+          const starBtn = document.createElement("button");
+          starBtn.type = "button";
+          starBtn.className = "btn btn-sm" + (script.starred ? " btn-active-toggle" : "");
+          starBtn.textContent = script.starred ? "⭐ Starred" : "☆ Star";
+          starBtn.setAttribute("aria-label", (script.starred ? "Unstar " : "Star ") + script.title);
+          starBtn.addEventListener("click", function () {
+            script.starred = !script.starred;
+            if (editingScriptId === script.id) {
+              const starredInput = document.getElementById("smStarredInput");
+              if (starredInput) starredInput.checked = script.starred;
+            }
+            saveState();
+            renderAll();
+          });
+
+          const editBtn = document.createElement("button");
+          editBtn.type = "button";
+          editBtn.className = "btn btn-sm";
+          editBtn.textContent = "Edit";
+          editBtn.addEventListener("click", function () {
+            enterScriptEditMode(script.id);
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "btn btn-sm btn-danger-outline";
+          delBtn.textContent = "Delete";
+          delBtn.addEventListener("click", function () {
+            if (window.confirm('Delete script "' + script.title + '"? This cannot be undone.')) {
+              state.scripts = state.scripts.filter(function (s) {
+                return s.id !== script.id;
+              });
+              delete state.checks[script.id];
+              if (editingScriptId === script.id) {
+                exitScriptEditMode();
+              }
+              saveState();
+              renderAll();
+            }
+          });
+
+          actions.appendChild(prompterBtn);
+          actions.appendChild(starBtn);
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          row.appendChild(info);
+          row.appendChild(actions);
+          listEl.appendChild(row);
+        });
+      }
+
+      /* ============================================================
+         7. BACKUP EXPORT / IMPORT (SETTINGS CARD)
+         ============================================================ */
+      function exportBackupJson() {
+        clearInlineMessage("settingsFeedbackMsg");
+        const payload = JSON.stringify(state, null, 2);
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "challenger-studio-backup-" + getTodayLocalStr() + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 1000);
+        showInlineMessage("settingsFeedbackMsg", "Backup exported successfully.", "success");
+      }
+
+      function importBackupJsonFile(file) {
+        if (!file) return;
+        clearInlineMessage("settingsFeedbackMsg");
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const rawText = String(e.target.result || "");
+            const parsed = JSON.parse(rawText);
+            const validated = validateAndNormalizeState(parsed);
+            if (!validated) {
+              showInlineMessage(
+                "settingsFeedbackMsg",
+                "Import failed: backup file does not match the Challenger Studio schema ({ posts, scripts, checks }). Existing data was not modified.",
+                "error"
+              );
+              return;
+            }
+            state = validated;
+            exitScriptEditMode();
+            resetTeleprompter();
+            saveState();
+            renderAll();
+            showInlineMessage(
+              "settingsFeedbackMsg",
+              "Backup imported: " + state.scripts.length + " scripts and " + state.posts.length + " posts restored.",
+              "success"
+            );
+          } catch (err) {
+            showInlineMessage(
+              "settingsFeedbackMsg",
+              "Import failed: corrupt or invalid JSON file. Existing data was not modified.",
+              "error"
+            );
+          }
+        };
+        reader.onerror = function () {
+          showInlineMessage(
+            "settingsFeedbackMsg",
+            "Import failed: could not read the selected file.",
+            "error"
+          );
+        };
+        reader.readAsText(file);
+      }
+
+      /* ============================================================
+         8. TAB SWITCHING & MASTER RENDER LOOP
+         ============================================================ */
+      function switchTab(tabName) {
+        activeTab = tabName;
+        const btnTp = document.getElementById("tabBtnTeleprompter");
+        const btnCmd = document.getElementById("tabBtnCommand");
+        const panelTp = document.getElementById("panelTeleprompter");
+        const panelCmd = document.getElementById("panelCommand");
+
+        if (tabName !== "teleprompter" && (tpIsScrolling || tpIsCountingDown)) {
+          stopTeleprompterScroll("Paused");
+        }
+        if (tabName !== "teleprompter" && tpCinemaMode) {
+          toggleTeleprompterCinemaMode();
+        }
+
+        if (btnTp) btnTp.classList.toggle("active", tabName === "teleprompter");
+        if (btnCmd) btnCmd.classList.toggle("active", tabName === "command");
+        if (panelTp) panelTp.classList.toggle("active", tabName === "teleprompter");
+        if (panelCmd) panelCmd.classList.toggle("active", tabName === "command");
+      }
+
+      // PHASE 2 RENDER HOOK: renderDailyLifeOS() can be called inside renderAll() when added
+      function renderAll(animateBump) {
+        renderTeleprompter();
+        renderStats(Boolean(animateBump));
+        renderPostsTable();
+        renderLibrary();
+        renderScriptManagerList();
+      }
+
+      /* ============================================================
+         9. EVENT LISTENERS & INITIALIZATION
+         ============================================================ */
+      function bindEvents() {
+        // Tab buttons
+        const btnTp = document.getElementById("tabBtnTeleprompter");
+        const btnCmd = document.getElementById("tabBtnCommand");
+        if (btnTp) {
+          btnTp.addEventListener("click", function () {
+            switchTab("teleprompter");
+          });
+        }
+        if (btnCmd) {
+          btnCmd.addEventListener("click", function () {
+            switchTab("command");
+            renderPerformanceDashboard();
+          });
+        }
+
+        // Heatmap range switcher buttons (16W / 26W / 52W)
+        const rangeBtns = document.querySelectorAll(".range-btn[data-weeks]");
+        rangeBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            const weeks = Number(btn.getAttribute("data-weeks")) || 52;
+            heatmapWeeksCount = weeks;
+            rangeBtns.forEach(function (b) {
+              b.classList.toggle("active", b === btn);
+            });
+            renderPerformanceDashboard();
+          });
+        });
+
+        // Teleprompter controls
+        const selectEl = document.getElementById("tpScriptSelect");
+        if (selectEl) {
+          selectEl.addEventListener("change", function () {
+            tpSelectedScriptId = selectEl.value;
+            resetTeleprompter();
+            renderTeleprompter();
+            selectEl.blur();
+          });
+        }
+
+        const startPauseBtn = document.getElementById("tpStartPauseBtn");
+        if (startPauseBtn) {
+          startPauseBtn.addEventListener("click", toggleTeleprompterPlayPause);
+        }
+
+        const resetBtn = document.getElementById("tpResetBtn");
+        if (resetBtn) {
+          resetBtn.addEventListener("click", resetTeleprompter);
+        }
+
+        const mirrorBtn = document.getElementById("tpMirrorBtn");
+        if (mirrorBtn) {
+          mirrorBtn.addEventListener("click", toggleTeleprompterMirror);
+        }
+
+        const eyeFocusBtn = document.getElementById("tpEyeFocusBtn");
+        if (eyeFocusBtn) {
+          eyeFocusBtn.addEventListener("click", toggleTeleprompterEyeFocus);
+        }
+
+        const columnWidthBtn = document.getElementById("tpColumnWidthBtn");
+        if (columnWidthBtn) {
+          columnWidthBtn.addEventListener("click", toggleTeleprompterColumnWidth);
+        }
+
+        const cinemaBtn = document.getElementById("tpCinemaBtn");
+        if (cinemaBtn) {
+          cinemaBtn.addEventListener("click", toggleTeleprompterCinemaMode);
+        }
+
+        const markRecordedBtn = document.getElementById("tpMarkRecordedBtn");
+        if (markRecordedBtn) {
+          markRecordedBtn.addEventListener("click", function () {
+            if (!tpSelectedScriptId) return;
+            if (!state.checks[tpSelectedScriptId]) {
+              state.checks[tpSelectedScriptId] = { recorded: false, posted: false };
+            }
+            state.checks[tpSelectedScriptId].recorded = !state.checks[tpSelectedScriptId].recorded;
+            saveState();
+            syncTeleprompterRecordedBtn();
+            renderStats(true);
+            renderLibrary();
+            // Update [✓ Rec] badge in dropdown without losing current scroll position
+            const currentScroll = document.getElementById("tpViewport") ? document.getElementById("tpViewport").scrollTop : 0;
+            renderTeleprompter();
+            const vp = document.getElementById("tpViewport");
+            if (vp) {
+              vp.scrollTop = currentScroll;
+              tpScrollAccumulator = currentScroll;
+              updateActiveEyeLine();
+            }
+          });
+        }
+
+        const speedSlider = document.getElementById("tpSpeedSlider");
+        if (speedSlider) {
+          speedSlider.addEventListener("input", function () {
+            updateTeleprompterSpeed(speedSlider.value);
+          });
+        }
+
+        const sizeSlider = document.getElementById("tpSizeSlider");
+        if (sizeSlider) {
+          sizeSlider.addEventListener("input", function () {
+            updateTeleprompterTextSize(sizeSlider.value);
+          });
+        }
+
+        // Sync manual scrolling on teleprompter viewport with accumulator & Eye-Line Focus
+        const viewportEl = document.getElementById("tpViewport");
+        if (viewportEl) {
+          viewportEl.addEventListener("scroll", function () {
+            if (!tpIsScrolling) {
+              tpScrollAccumulator = viewportEl.scrollTop;
+              updateActiveEyeLine();
+            }
+          });
+        }
+
+        // Keyboard shortcuts (Space = play/pause, ArrowUp/ArrowDown = speed +/-, R = reset, E = eye-focus, F = studio focus)
+        window.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && tpCinemaMode) {
+            e.preventDefault();
+            toggleTeleprompterCinemaMode();
+            return;
+          }
+
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+          const activeEl = document.activeElement;
+          if (activeEl) {
+            const tag = activeEl.tagName ? activeEl.tagName.toUpperCase() : "";
+            const inputType = activeEl.type ? String(activeEl.type).toLowerCase() : "";
+            const isTypingInput = tag === "INPUT" && inputType !== "range" && inputType !== "checkbox" && inputType !== "button";
+            if (isTypingInput || tag === "TEXTAREA" || tag === "SELECT" || activeEl.isContentEditable) {
+              return;
+            }
+          }
+
+          if (activeTab !== "teleprompter") return;
+
+          if (e.code === "Space" || e.key === " ") {
+            e.preventDefault();
+            toggleTeleprompterPlayPause();
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            updateTeleprompterSpeed(tpSpeedPxPerSec + 5);
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            updateTeleprompterSpeed(tpSpeedPxPerSec - 5);
+          } else if (e.key === "r" || e.key === "R") {
+            e.preventDefault();
+            resetTeleprompter();
+          } else if (e.key === "e" || e.key === "E") {
+            e.preventDefault();
+            toggleTeleprompterEyeFocus();
+          } else if (e.key === "f" || e.key === "F") {
+            e.preventDefault();
+            toggleTeleprompterCinemaMode();
+          }
+        });
+
+        // Script Manager Quick-Insert Vocal Cues & Hook Templates
+        const cueBtns = document.querySelectorAll(".cue-chip-btn[data-insert-cue]");
+        cueBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            const cue = btn.getAttribute("data-insert-cue");
+            if (cue) insertTextIntoScriptBody(cue);
+          });
+        });
+
+        const hookBtns = document.querySelectorAll(".cue-chip-btn[data-insert-hook]");
+        hookBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            const hookKey = btn.getAttribute("data-insert-hook");
+            if (hookKey && HOOK_TEMPLATES[hookKey]) {
+              insertTextIntoScriptBody(HOOK_TEMPLATES[hookKey]);
+            }
+          });
+        });
+
+        // Log a Post Form
+        const logPostForm = document.getElementById("logPostForm");
+        if (logPostForm) {
+          logPostForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            clearInlineMessage("logPostMsg");
+
+            const titleInput = document.getElementById("postTitleInput");
+            const platformSelect = document.getElementById("postPlatformSelect");
+            const dateInput = document.getElementById("postDateInput");
+
+            const title = titleInput ? titleInput.value.trim() : "";
+            const platform = platformSelect && VALID_PLATFORMS.indexOf(platformSelect.value) !== -1
+              ? platformSelect.value
+              : "Instagram";
+            const dateVal = dateInput && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.value)
+              ? dateInput.value
+              : getTodayLocalStr();
+
+            if (!title) {
+              showInlineMessage("logPostMsg", "Post title is required before logging.", "error");
+              if (titleInput) titleInput.focus();
+              return;
+            }
+
+            state.posts.unshift({
+              title: title,
+              platform: platform,
+              date: dateVal
+            });
+
+            flashNewestPostRow = true;
+            selectedHeatmapDate = dateVal;
+            if (titleInput) titleInput.value = "";
+            saveState();
+            renderAll(true);
+            const scoreEl = document.getElementById("perfOverallScore");
+            if (scoreEl) triggerStatBump(scoreEl);
+          });
+        }
+
+        // Script Manager Form
+        const smBodyInput = document.getElementById("smBodyInput");
+        if (smBodyInput) {
+          smBodyInput.addEventListener("input", updateScriptManagerHelper);
+        }
+
+        const smCancelBtn = document.getElementById("smCancelEditBtn");
+        if (smCancelBtn) {
+          smCancelBtn.addEventListener("click", function () {
+            clearInlineMessage("smFeedbackMsg");
+            exitScriptEditMode();
+          });
+        }
+
+        const smForm = document.getElementById("scriptManagerForm");
+        if (smForm) {
+          smForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            clearInlineMessage("smFeedbackMsg");
+
+            const titleInput = document.getElementById("smTitleInput");
+            const bodyInput = document.getElementById("smBodyInput");
+            const starredInput = document.getElementById("smStarredInput");
+
+            const title = titleInput ? titleInput.value.trim() : "";
+            const body = bodyInput ? bodyInput.value.trim() : "";
+            const starred = Boolean(starredInput && starredInput.checked);
+
+            if (!title || !body) {
+              showInlineMessage(
+                "smFeedbackMsg",
+                "Both a script title and spoken body text are required.",
+                "error"
+              );
+              if (!title && titleInput) {
+                titleInput.focus();
+              } else if (!body && bodyInput) {
+                bodyInput.focus();
+              }
+              return;
+            }
+
+            if (editingScriptId) {
+              const target = state.scripts.find(function (s) {
+                return s.id === editingScriptId;
+              });
+              if (target) {
+                target.title = title;
+                target.body = body;
+                target.starred = starred;
+              }
+              const updatedId = editingScriptId;
+              exitScriptEditMode();
+              tpSelectedScriptId = updatedId;
+              saveState();
+              renderAll();
+              showInlineMessage("smFeedbackMsg", "Script changes saved.", "success");
+            } else {
+              const newId = "script-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+              state.scripts.push({
+                id: newId,
+                title: title,
+                body: body,
+                starred: starred
+              });
+              state.checks[newId] = { recorded: false, posted: false };
+              tpSelectedScriptId = newId;
+              exitScriptEditMode();
+              saveState();
+              renderAll();
+              showInlineMessage("smFeedbackMsg", "New script added to your library and Teleprompter.", "success");
+            }
+          });
+        }
+
+        // Settings Export / Import
+        const exportBtn = document.getElementById("exportBackupBtn");
+        if (exportBtn) {
+          exportBtn.addEventListener("click", exportBackupJson);
+        }
+
+        const importBtn = document.getElementById("importBackupBtn");
+        const importInput = document.getElementById("importBackupFileInput");
+        if (importBtn && importInput) {
+          importBtn.addEventListener("click", function () {
+            importInput.value = "";
+            importInput.click();
+          });
+          importInput.addEventListener("change", function () {
+            if (importInput.files && importInput.files[0]) {
+              importBackupJsonFile(importInput.files[0]);
+            }
+          });
+        }
+      }
+
+      function initApp() {
+        loadState();
+
+        const dateInput = document.getElementById("postDateInput");
+        if (dateInput) {
+          dateInput.value = getTodayLocalStr();
+        }
+
+        updateTeleprompterSpeed(tpSpeedPxPerSec);
+        updateTeleprompterTextSize(tpTextSizePx);
+        updateScriptManagerHelper();
+        bindEvents();
+        renderAll();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initApp);
+      } else {
+        initApp();
+      }
+    })();
+  </script>
+</body>
+</html>
